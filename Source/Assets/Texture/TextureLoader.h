@@ -2,7 +2,7 @@
 
 #include "TextureData.h"
 
-class DeviceTexture;
+class Texture;
 
 class TextureLoader
 {

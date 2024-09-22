@@ -10,7 +10,7 @@
 #include "MeshData.h"
 #include "Material/MaterialData.h"
 
-class DeviceTexture;
+class Texture;
 
 class AssetManager
 {

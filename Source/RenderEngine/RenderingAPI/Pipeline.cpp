@@ -31,7 +31,6 @@ void Pipeline::bind(VkCommandBuffer command_buffer)
 void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const std::string& fragment_file_path, const PipelineConfigInfo& config_info)
 {
     assert(config_info.pipeline_layout != VK_NULL_HANDLE && "Cannot create graphics pipeline: no pipeline layout provided in config info!");
-    assert(config_info.render_pass != VK_NULL_HANDLE && "Cannot create graphics pipeline: no updateElements pass provided in config info!");
 
     auto vert_code = readFile(vertex_file_path);
     auto frag_code = readFile(fragment_file_path);
@@ -39,7 +38,7 @@ void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const
     createShaderModule(vert_code, &vertex_shader_module);
     createShaderModule(frag_code, &fragment_shader_module);
 
-    std::array<VkPipelineShaderStageCreateInfo, 2> shader_stage_create_infos;
+    std::array<VkPipelineShaderStageCreateInfo, 2> shader_stage_create_infos{};
     shader_stage_create_infos[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shader_stage_create_infos[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     shader_stage_create_infos[0].module = vertex_shader_module;
@@ -58,6 +57,7 @@ void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const
 
     auto& attribute_descriptions = config_info.attribute_descriptions;
     auto& binding_descriptions = config_info.binding_descriptions;
+
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info{};
     vertex_input_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_input_state_create_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attribute_descriptions.size());
@@ -77,10 +77,9 @@ void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const
     pipeline_create_info.pColorBlendState = &config_info.color_blend_info;
     pipeline_create_info.pDepthStencilState = &config_info.depth_stencil_info;
     pipeline_create_info.pDynamicState = &config_info.dynamic_state_info;
+    pipeline_create_info.pNext = &config_info.rendering_create_info;
 
     pipeline_create_info.layout = config_info.pipeline_layout;
-    pipeline_create_info.renderPass = config_info.render_pass;
-    pipeline_create_info.subpass = config_info.subpass;
 
     pipeline_create_info.basePipelineIndex = -1;
     pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;

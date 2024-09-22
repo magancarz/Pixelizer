@@ -4,7 +4,7 @@
 
 #include "Assets/Texture/TextureData.h"
 
-class DeviceTexture;
+class Texture;
 
 struct MaterialInfo
 {

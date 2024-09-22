@@ -8,7 +8,7 @@
 #include "Assets/Defines.h"
 #include "Logs/LogSystem.h"
 #include "Utils/PathBuilder.h"
-#include "RenderEngine/Textures/DeviceTexture.h"
+#include "RenderEngine/Textures/Texture.h"
 
 TextureData TextureLoader::loadFromAssetFile(const std::string& texture_name)
 {

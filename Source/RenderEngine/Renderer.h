@@ -4,8 +4,8 @@
 #include "Assets/AssetManager.h"
 #include "Editor/Window/Window.h"
 #include "RenderEngine/RenderingAPI/SwapChain.h"
-#include "RenderEngine/RenderingAPI/Descriptors/DescriptorPool.h"
 #include "RenderEngine/RenderingAPI/CommandBuffer/CommandBuffer.h"
+#include "RenderingAPI/Pipeline.h"
 
 class Renderer
 {
@@ -55,6 +55,13 @@ private:
 
     std::vector<CommandBuffer> command_buffers;
 
+    void createSimplePipeline();
+
+    VkPipelineLayout simple_pipeline_layout{VK_NULL_HANDLE};
+    std::unique_ptr<Pipeline> simple_pipeline;
+
+    Model* model;
+
     VkCommandBuffer beginFrame();
     void endFrame(VkCommandBuffer graphics_command_buffer);
 
@@ -64,6 +71,4 @@ private:
     bool is_frame_in_progress{false};
     int current_frame_index{0};
     uint32_t current_image_index{0};
-
-    void handleWindowResize();
 };

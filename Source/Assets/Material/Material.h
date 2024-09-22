@@ -1,7 +1,7 @@
 #pragma once
 
 #include "MaterialInfo.h"
-#include "RenderEngine/Textures/DeviceTexture.h"
+#include "RenderEngine/Textures/Texture.h"
 
 class VulkanMemoryAllocator;
 

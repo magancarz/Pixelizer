@@ -6,7 +6,7 @@
 Model::Model(
         VulkanMemoryAllocator& memory_allocator,
         const ModelData& model_data)
-    : vertices{model_data.vertices}, indices{model_data.indices}, name{model_data.name}, required_material{model_data.required_material}
+    : name{model_data.name}, required_material{model_data.required_material}
 {
     createVertexBuffer(memory_allocator, model_data.vertices);
     createIndexBuffer(memory_allocator, model_data.indices);
@@ -26,11 +26,8 @@ void Model::createVertexBuffer(VulkanMemoryAllocator& memory_allocator, const st
     vertex_buffer_info.instance_size = sizeof(Vertex);
     vertex_buffer_info.instance_count = static_cast<uint32_t>(vertices.size());
     vertex_buffer_info.usage_flags =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-    vertex_buffer_info.required_memory_flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     vertex_buffer = memory_allocator.createBuffer(vertex_buffer_info);
     vertex_buffer->copyFrom(*staging_buffer);
@@ -49,14 +46,24 @@ void Model::createIndexBuffer(VulkanMemoryAllocator& memory_allocator, const std
     index_buffer_info.instance_size = sizeof(uint32_t);
     index_buffer_info.instance_count = static_cast<uint32_t>(indices.size());
     index_buffer_info.usage_flags =
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-    index_buffer_info.required_memory_flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     index_buffer = memory_allocator.createBuffer(index_buffer_info);
     index_buffer->copyFrom(*staging_buffer);
+}
+
+void Model::bind(VkCommandBuffer command_buffer)
+{
+    VkBuffer buffers[] = {vertex_buffer->getBuffer()};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(command_buffer, 0, 1, buffers, offsets);
+    vkCmdBindIndexBuffer(command_buffer, index_buffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
+}
+
+void Model::draw(VkCommandBuffer command_buffer)
+{
+    vkCmdDrawIndexed(command_buffer, index_count, 1, 0, 0, 0);
 }
 
 ModelDescription Model::getModelDescription() const

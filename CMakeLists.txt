@@ -71,7 +71,7 @@ add_dependencies(Pixelizer SHADERS)
 
 include(CTest)
 enable_testing()
-add_subdirectory(ThirdParty/gtest)
+add_subdirectory(ThirdParty/GTest)
 
 if(BUILD_TESTING)
 	file(GLOB_RECURSE SOURCES

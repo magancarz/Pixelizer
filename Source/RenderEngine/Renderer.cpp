@@ -1,12 +1,12 @@
 #include "Renderer.h"
 
-#include <thread>
-
 #include "imgui.h"
-#include "Logs/LogSystem.h"
 
 #include "RenderEngine/RenderingAPI/Descriptors/DescriptorWriter.h"
+#include "RenderingAPI/Pipeline.h"
+#include "RenderingAPI/PipelineConfigInfo.h"
 #include "RenderingAPI/VulkanDefines.h"
+#include "RenderingAPI/VulkanUtils.h"
 #include "RenderingAPI/CommandBuffer/CommandBuffer.h"
 
 Renderer::Renderer(
@@ -18,10 +18,12 @@ Renderer::Renderer(
         VulkanMemoryAllocator& memory_allocator,
         AssetManager& asset_manager)
     : window{window}, surface{surface}, physical_device{physical_device}, device{logical_device},
-    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager}
+    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager},
+    model{asset_manager.fetchModel("Suzanne")}
 {
     recreateSwapChain();
     createCommandBuffers();
+    createSimplePipeline();
 }
 
 void Renderer::recreateSwapChain()
@@ -66,6 +68,52 @@ void Renderer::freeCommandBuffers()
     command_buffers.clear();
 }
 
+void Renderer::createSimplePipeline()
+{
+    // VkPushConstantRange push_constant_range{};
+    // push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    // push_constant_range.offset = 0;
+    // push_constant_range.size = sizeof(SimplePushConstantData);
+    //
+    // std::vector<VkDescriptorSetLayout> descriptor_set_layouts{global_set_layout};
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info{};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    // pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
+    // pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
+    // pipeline_layout_info.pushConstantRangeCount = 1;
+    // pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+
+    if (vkCreatePipelineLayout(device.handle(), &pipeline_layout_info, VulkanDefines::NO_CALLBACK, &simple_pipeline_layout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create pipeline layout!");
+    }
+
+    assert(simple_pipeline_layout != nullptr && "Cannot create pipeline before pipeline layout");
+
+    VkFormat swap_chain_image_format = swap_chain->getSwapChainImageFormat();
+
+    VkPipelineRenderingCreateInfoKHR pipeline_rendering_create_info{};
+    pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    pipeline_rendering_create_info.colorAttachmentCount = 1;
+    pipeline_rendering_create_info.pColorAttachmentFormats = &swap_chain_image_format;
+
+    PipelineConfigInfo config_info{};
+    Pipeline::defaultPipelineConfigInfo(config_info);
+    config_info.pipeline_layout = simple_pipeline_layout;
+    config_info.rendering_create_info = pipeline_rendering_create_info;
+    config_info.binding_descriptions = VulkanUtils::getVertexBindingDescriptions();
+    config_info.attribute_descriptions = VulkanUtils::getVertexAttributeDescriptions();
+
+    simple_pipeline = std::make_unique<Pipeline>
+    (
+        device,
+        "Shaders/SimpleShader.vert.spv",
+        "Shaders/SimpleShader.frag.spv",
+        config_info
+    );
+}
+
 void Renderer::render(FrameInfo& frame_info)
 {
     if (auto command_buffer = beginFrame())
@@ -75,6 +123,10 @@ void Renderer::render(FrameInfo& frame_info)
         frame_info.frame_index = swap_chain->getCurrentFrameIndex();
 
         beginRenderPass(command_buffer);
+
+        simple_pipeline->bind(command_buffer);
+        model->bind(command_buffer);
+        model->draw(command_buffer);
 
         endRenderPass(command_buffer);
 

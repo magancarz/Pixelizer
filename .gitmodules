@@ -1,11 +1,11 @@
-[submodule "ThirdParty/VMA"]
-	path = ThirdParty/VMA
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
 [submodule "ThirdParty/GLFW"]
 	path = ThirdParty/GLFW
 	url = https://github.com/glfw/glfw.git
-[submodule "ThirdParty/gtest"]
-	path = ThirdParty/gtest
+[submodule "ThirdParty/VMA"]
+	path = ThirdParty/VMA
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "ThirdParty/GTest"]
+	path = ThirdParty/GTest
 	url = https://github.com/google/googletest.git
 [submodule "ThirdParty/GLM"]
 	path = ThirdParty/GLM

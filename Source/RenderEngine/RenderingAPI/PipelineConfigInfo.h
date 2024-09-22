@@ -18,8 +18,7 @@ struct PipelineConfigInfo
     VkPipelineColorBlendStateCreateInfo color_blend_info{};
     VkPipelineDepthStencilStateCreateInfo depth_stencil_info{};
     std::vector<VkDynamicState> dynamic_state_enables;
-    VkPipelineDynamicStateCreateInfo dynamic_state_info;
+    VkPipelineDynamicStateCreateInfo dynamic_state_info{};
+    VkPipelineRenderingCreateInfoKHR rendering_create_info{};
     VkPipelineLayout pipeline_layout{nullptr};
-    VkRenderPass render_pass{nullptr};
-    uint32_t subpass{0};
 };
