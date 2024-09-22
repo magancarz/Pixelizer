@@ -5,11 +5,13 @@
 #include "RenderEngine/FrameInfo.h"
 #include "Objects/Object.h"
 
-CameraComponent::CameraComponent(Object& owner)
-    : ObjectComponent(owner) {}
+CameraComponent::CameraComponent(Object& owner, TransformComponent& transform_component)
+    : ObjectComponent(owner), transform_component{transform_component} {}
 
 void CameraComponent::update(FrameInfo& frame_info)
 {
+    setViewYXZ(transform_component.getLocation(), transform_component.getRotationInEulerAngles());
+
     frame_info.camera_view_matrix = view;
     frame_info.camera_projection_matrix = projection;
 }

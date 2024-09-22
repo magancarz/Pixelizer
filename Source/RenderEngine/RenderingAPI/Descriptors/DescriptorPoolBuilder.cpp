@@ -1,5 +1,7 @@
 #include "DescriptorPoolBuilder.h"
 
+#include "glm/exponential.hpp"
+
 DescriptorPoolBuilder& DescriptorPoolBuilder::addPoolSize(
         VkDescriptorType descriptor_type, uint32_t count)
 {
@@ -27,5 +29,5 @@ std::unique_ptr<DescriptorPool> DescriptorPoolBuilder::build() const
         return nullptr;
     }
 
-    return std::make_unique<DescriptorPool>(device.getLogicalDevice(), max_sets, pool_flags, pool_sizes);
+    return std::make_unique<DescriptorPool>(logical_device, max_sets, pool_flags, pool_sizes);
 }

@@ -3,6 +3,7 @@
 #include "RenderEngine/Renderer.h"
 #include "Assets/AssetManager.h"
 #include "Input/InputManager.h"
+#include "Objects/Object.h"
 
 class Pixelizer
 {
@@ -24,4 +25,9 @@ private:
     AssetManager asset_manager;
 
     Renderer renderer;
+
+    void prepareScene();
+
+    Object viewer_object;
+    Object rendered_object;
 };

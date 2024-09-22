@@ -8,10 +8,11 @@
 
 Pipeline::Pipeline(
         const Device& device,
+        VkPipelineLayout pipeline_layout,
         const std::string& vertex_file_path,
         const std::string& fragment_file_path,
         const PipelineConfigInfo& config_info)
-    : device{device}
+    : device{device}, pipeline_layout{pipeline_layout}
 {
     createGraphicsPipeline(vertex_file_path, fragment_file_path, config_info);
 }
@@ -26,6 +27,19 @@ Pipeline::~Pipeline()
 void Pipeline::bind(VkCommandBuffer command_buffer)
 {
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+}
+
+void Pipeline::bindDescriptorSets(VkCommandBuffer command_buffer, VkDescriptorSet* descriptor_sets, uint32_t descriptor_set_count)
+{
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline_layout,
+        0,
+        descriptor_set_count,
+        descriptor_sets,
+        0,
+        nullptr);
 }
 
 void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const std::string& fragment_file_path, const PipelineConfigInfo& config_info)

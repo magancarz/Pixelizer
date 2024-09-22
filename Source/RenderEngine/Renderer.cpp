@@ -8,6 +8,9 @@
 #include "RenderingAPI/VulkanDefines.h"
 #include "RenderingAPI/VulkanUtils.h"
 #include "RenderingAPI/CommandBuffer/CommandBuffer.h"
+#include "RenderingAPI/Descriptors/DescriptorPoolBuilder.h"
+#include "RenderingAPI/Descriptors/DescriptorSetLayoutBuilder.h"
+#include "Common/CameraUBO.h"
 
 Renderer::Renderer(
         Window& window,
@@ -23,6 +26,7 @@ Renderer::Renderer(
 {
     recreateSwapChain();
     createCommandBuffers();
+    createCameraDescriptorSet();
     createSimplePipeline();
 }
 
@@ -68,19 +72,48 @@ void Renderer::freeCommandBuffers()
     command_buffers.clear();
 }
 
+void Renderer::createCameraDescriptorSet()
+{
+    descriptor_pool = DescriptorPoolBuilder(device)
+        .setMaxSets(SwapChain::MAX_FRAMES_IN_FLIGHT)
+        .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SwapChain::MAX_FRAMES_IN_FLIGHT)
+        .build();
+
+    camera_descriptor_set_layout = DescriptorSetLayoutBuilder(device)
+        .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+        .build();
+
+    BufferInfo camera_uniform_buffer_info{};
+    camera_uniform_buffer_info.instance_size = sizeof(CameraUBO);
+    camera_uniform_buffer_info.instance_count = 1;
+    camera_uniform_buffer_info.usage_flags = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    camera_uniform_buffer_info.required_memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    camera_uniform_buffer_info.allocation_flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+
+    for (std::size_t i = 0; i < SwapChain::MAX_FRAMES_IN_FLIGHT; ++i)
+    {
+        camera_uniform_buffers[i] = memory_allocator.createBuffer(camera_uniform_buffer_info);
+        VkDescriptorBufferInfo camera_descriptor_buffer_info = camera_uniform_buffers[i]->descriptorInfo();
+
+        DescriptorWriter(*camera_descriptor_set_layout, *descriptor_pool)
+            .writeBuffer(0, &camera_descriptor_buffer_info)
+            .build(camera_descriptor_set_handles[i]);
+    }
+}
+
 void Renderer::createSimplePipeline()
 {
     // VkPushConstantRange push_constant_range{};
     // push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     // push_constant_range.offset = 0;
     // push_constant_range.size = sizeof(SimplePushConstantData);
-    //
-    // std::vector<VkDescriptorSetLayout> descriptor_set_layouts{global_set_layout};
+
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts{camera_descriptor_set_layout->getDescriptorSetLayout()};
 
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    // pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
-    // pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
+    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
+    pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
     // pipeline_layout_info.pushConstantRangeCount = 1;
     // pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
@@ -108,6 +141,7 @@ void Renderer::createSimplePipeline()
     simple_pipeline = std::make_unique<Pipeline>
     (
         device,
+        simple_pipeline_layout,
         "Shaders/SimpleShader.vert.spv",
         "Shaders/SimpleShader.frag.spv",
         config_info
@@ -122,9 +156,17 @@ void Renderer::render(FrameInfo& frame_info)
         frame_info.window_size = swap_chain->getSwapChainExtent();
         frame_info.frame_index = swap_chain->getCurrentFrameIndex();
 
+        CameraUBO camera_ubo{};
+        camera_ubo.view = frame_info.camera_view_matrix;
+        camera_ubo.projection = frame_info.camera_projection_matrix;
+
+        camera_uniform_buffers[current_image_index]->writeToBuffer(&camera_ubo);
+
         beginRenderPass(command_buffer);
 
         simple_pipeline->bind(command_buffer);
+        simple_pipeline->bindDescriptorSets(command_buffer, &camera_descriptor_set_handles[current_image_index], 1);
+
         model->bind(command_buffer);
         model->draw(command_buffer);
 

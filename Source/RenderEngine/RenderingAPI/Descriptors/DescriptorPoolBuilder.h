@@ -6,7 +6,7 @@
 class DescriptorPoolBuilder
 {
 public:
-    explicit DescriptorPoolBuilder(VulkanSystem& device) : device{device} {}
+    explicit DescriptorPoolBuilder(Device& logical_device) : logical_device{logical_device} {}
 
     DescriptorPoolBuilder& addPoolSize(VkDescriptorType descriptor_type, uint32_t count);
     DescriptorPoolBuilder& setPoolFlags(VkDescriptorPoolCreateFlags flags);
@@ -14,7 +14,7 @@ public:
     [[nodiscard]] std::unique_ptr<DescriptorPool> build() const;
 
 private:
-    VulkanSystem& device;
+    Device& logical_device;
     std::vector<VkDescriptorPoolSize> pool_sizes{};
     uint32_t max_sets{1000};
     VkDescriptorPoolCreateFlags pool_flags{0};

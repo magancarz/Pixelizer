@@ -6,6 +6,8 @@
 #include "RenderEngine/RenderingAPI/SwapChain.h"
 #include "RenderEngine/RenderingAPI/CommandBuffer/CommandBuffer.h"
 #include "RenderingAPI/Pipeline.h"
+#include "RenderingAPI/Descriptors/DescriptorPool.h"
+#include "RenderingAPI/Descriptors/DescriptorSetLayout.h"
 
 class Renderer
 {
@@ -54,6 +56,14 @@ private:
     void freeCommandBuffers();
 
     std::vector<CommandBuffer> command_buffers;
+
+    void createCameraDescriptorSet();
+
+    std::array<std::unique_ptr<Buffer>, SwapChain::MAX_FRAMES_IN_FLIGHT> camera_uniform_buffers{};
+
+    std::unique_ptr<DescriptorPool> descriptor_pool;
+    std::unique_ptr<DescriptorSetLayout> camera_descriptor_set_layout;
+    std::array<VkDescriptorSet, SwapChain::MAX_FRAMES_IN_FLIGHT> camera_descriptor_set_handles;
 
     void createSimplePipeline();
 

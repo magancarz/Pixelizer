@@ -3,11 +3,12 @@
 #include <glm/glm.hpp>
 
 #include "ObjectComponent.h"
+#include "TransformComponent.h"
 
 class CameraComponent : public ObjectComponent
 {
 public:
-    CameraComponent(Object& owner);
+    explicit CameraComponent(Object& owner, TransformComponent& transform_component);
 
     void update(FrameInfo& frame_info) override;
 
@@ -25,4 +26,6 @@ private:
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
     glm::mat4 inverse_view{1.f};
+
+    TransformComponent& transform_component;
 };
