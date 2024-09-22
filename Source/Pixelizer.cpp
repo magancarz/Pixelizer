@@ -8,6 +8,7 @@
 #include "Input/InputSystem.h"
 #include "Objects/Components/CameraComponent.h"
 #include "Objects/Components/TransformComponent.h"
+#include "Objects/Components/ViewerMovementComponent.h"
 #include "RenderEngine/RenderingAPI/Memory/VulkanMemoryAllocator.h"
 
 Pixelizer::Pixelizer()
@@ -30,8 +31,11 @@ void Pixelizer::prepareScene()
     auto camera_component = std::make_unique<CameraComponent>(viewer_object, *transform_component);
     camera_component->setPerspectiveProjection(70.0f, WindowSystem::get().getAspect());
 
+    auto viewer_movement_component = std::make_unique<ViewerMovementComponent>(viewer_object, InputSystem::get(), *transform_component);
+
     viewer_object.addComponent(std::move(transform_component));
     viewer_object.addComponent(std::move(camera_component));
+    viewer_object.addComponent(std::move(viewer_movement_component));
 }
 
 Pixelizer::~Pixelizer()

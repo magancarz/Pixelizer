@@ -39,19 +39,12 @@ void CameraComponent::setViewYXZ(glm::vec3 position, glm::vec3 rotation)
     const glm::vec3 u{(c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1)};
     const glm::vec3 v{(c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3)};
     const glm::vec3 w{(c2 * s1), (-s2), (c1 * c2)};
+
     view = glm::mat4
     {
         {u.x, v.x, w.x, 0.0f},
         {u.y, v.y, w.y, 0.0f},
         {u.z, v.z, w.z, 0.0f},
         {-glm::dot(u, position), -glm::dot(v, position), -glm::dot(w, position), 1.0f}
-    };
-
-    inverse_view = glm::mat4
-    {
-        {u.x, u.y, u.z, 0.0f},
-        {v.x, v.y, v.z, 0.0f},
-        {w.x, w.y, w.z, 0.0f},
-        {position.x, position.y, position.z, 1.0f}
     };
 }
