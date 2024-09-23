@@ -14,6 +14,7 @@ public:
 
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
     uint32_t findMemoryType(uint32_t type_filter, VkMemoryPropertyFlags memory_property_flags);
+    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
 
     [[nodiscard]] VkPhysicalDevice getPhysicalDevice() const { return used_physical_device; }
     [[nodiscard]] QueueFamilyIndices getQueueFamilyIndices() const { return queue_family_indices; }

@@ -137,8 +137,6 @@ std::vector<ModelData> OBJLoader::loadShapes(
             Vertex second_vertex = extractVertex(shape.mesh.indices[i + 1], attrib);
             Vertex third_vertex = extractVertex(shape.mesh.indices[i + 2], attrib);
 
-            calculateTangentSpaceVectors(first_vertex, second_vertex, third_vertex);
-
             addVertexToModelInfo(model_data, unique_vertices, first_vertex);
             addVertexToModelInfo(model_data, unique_vertices, second_vertex);
             addVertexToModelInfo(model_data, unique_vertices, third_vertex);
@@ -216,21 +214,6 @@ glm::vec2 OBJLoader::getVertexTextureCoordinates(const tinyobj::index_t& index, 
     }
 
     return uv;
-}
-
-void OBJLoader::calculateTangentSpaceVectors(Vertex& first_vertex, Vertex& second_vertex, Vertex& third_vertex)
-{
-    const glm::vec3 edge1 = second_vertex.position - first_vertex.position;
-    const glm::vec3 edge2 = third_vertex.position - first_vertex.position;
-    const glm::vec2 delta_UV1 = second_vertex.uv - first_vertex.uv;
-    const glm::vec2 delta_UV2 = third_vertex.uv - first_vertex.uv;
-
-    glm::vec3 tangent;
-    const float f = 1.0f / (delta_UV1.x * delta_UV2.y - delta_UV2.x * delta_UV1.y);
-    tangent.x = f * (delta_UV2.y * edge1.x - delta_UV1.y * edge2.x);
-    tangent.y = f * (delta_UV2.y * edge1.y - delta_UV1.y * edge2.y);
-    tangent.z = f * (delta_UV2.y * edge1.z - delta_UV1.y * edge2.z);
-    first_vertex.tangent = second_vertex.tangent = third_vertex.tangent = normalize(tangent);
 }
 
 void OBJLoader::addVertexToModelInfo(ModelData& model_data, std::unordered_map<Vertex, uint32_t>& unique_vertices, const Vertex& vertex)

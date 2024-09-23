@@ -42,9 +42,16 @@ VkDevice Device::createLogicalDevice(const Instance& instance, const PhysicalDev
         queue_create_infos.push_back(queue_create_info);
     }
 
+    VkPhysicalDeviceVulkan12Features vulkan_12_features{};
+    vulkan_12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    vulkan_12_features.bufferDeviceAddress = VK_TRUE;
+    vulkan_12_features.bufferDeviceAddressCaptureReplay = VK_FALSE;
+    vulkan_12_features.bufferDeviceAddressMultiDevice = VK_FALSE;
+
     VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic_rendering_features{};
     dynamic_rendering_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     dynamic_rendering_features.dynamicRendering = VK_TRUE;
+    dynamic_rendering_features.pNext = &vulkan_12_features;
 
     VkPhysicalDeviceFeatures device_features{};
     device_features.samplerAnisotropy = VK_TRUE;

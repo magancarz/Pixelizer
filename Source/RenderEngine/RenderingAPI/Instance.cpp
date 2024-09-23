@@ -162,7 +162,7 @@ std::vector<const char*> Instance::getRequiredExtensions()
     }
 
     //TIP: comment if debugging with Renderdoc
-    extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    // extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 
     return extensions;
 }

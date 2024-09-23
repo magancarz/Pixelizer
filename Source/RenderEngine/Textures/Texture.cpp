@@ -17,6 +17,7 @@ Texture::Texture(
 {
     copyDataToImage(memory_allocator, texture_info.data);
     createImageView();
+    createImageSampler();
     generateMipmaps();
     transitionImageLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 }
@@ -25,11 +26,7 @@ void Texture::copyDataToImage(VulkanMemoryAllocator& memory_allocator, const std
 {
     transitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     auto buffer = memory_allocator.createStagingBuffer(4, texture_info.width * texture_info.height, texture_data.data());
-    copyBufferToImage(buffer->getBuffer());
-}
 
-void Texture::copyBufferToImage(VkBuffer src_buffer)
-{
     SingleTimeCommandBuffer single_time_command_buffer = transfer_command_pool.createSingleTimeCommandBuffer();
     VkCommandBuffer command_buffer = single_time_command_buffer.beginRecording();
 
@@ -48,7 +45,7 @@ void Texture::copyBufferToImage(VkBuffer src_buffer)
 
     vkCmdCopyBufferToImage(
         command_buffer,
-        src_buffer,
+        buffer->getBuffer(),
         image_buffer->getImage(),
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         1,
@@ -100,12 +97,6 @@ void Texture::createImageSampler()
     {
         throw std::runtime_error("Failed to create image sampler!");
     }
-}
-
-Texture::~Texture()
-{
-    vkDestroyImageView(logical_device.handle(), image_view, VulkanDefines::NO_CALLBACK);
-    vkDestroySampler(logical_device.handle(), sampler, VulkanDefines::NO_CALLBACK);
 }
 
 void Texture::transitionImageLayout(VkImageLayout old_layout, VkImageLayout new_layout)
@@ -295,6 +286,12 @@ void Texture::generateMipmaps()
     fence.wait();
 
     image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+}
+
+Texture::~Texture()
+{
+    vkDestroyImageView(logical_device.handle(), image_view, VulkanDefines::NO_CALLBACK);
+    vkDestroySampler(logical_device.handle(), sampler, VulkanDefines::NO_CALLBACK);
 }
 
 VkDescriptorImageInfo Texture::descriptorInfo() const

@@ -8,9 +8,9 @@
 #include "VulkanDefines.h"
 #include "Logs/LogSystem.h"
 
-SwapChain::SwapChain(Surface& surface, PhysicalDevice& physical_device, Device& logical_device, VkExtent2D window_extent)
-    : surface{surface}, physical_device{physical_device}, logical_device{logical_device}, graphics_queue{logical_device.getGraphicsQueue()},
-    present_queue{logical_device.getPresentQueue()}, window_extent{window_extent}
+SwapChain::SwapChain(Surface& surface, PhysicalDevice& physical_device, Device& logical_device, VulkanMemoryAllocator& memory_allocator, VkExtent2D window_extent)
+    : surface{surface}, physical_device{physical_device}, logical_device{logical_device}, memory_allocator{memory_allocator},
+    graphics_queue{logical_device.getGraphicsQueue()}, present_queue{logical_device.getPresentQueue()}, window_extent{window_extent}
 {
     initializeSwapChain();
 }
@@ -19,12 +19,13 @@ void SwapChain::initializeSwapChain()
 {
     createSwapChain();
     createImageViews();
+    createDepthResources();
     createSyncObjects();
 }
 
-SwapChain::SwapChain(Surface& surface, PhysicalDevice& physical_device, Device& logical_device, VkExtent2D window_extent, std::shared_ptr<SwapChain> previous)
-    : surface{surface}, physical_device{physical_device}, logical_device{logical_device}, graphics_queue{logical_device.getGraphicsQueue()},
-    present_queue{logical_device.getPresentQueue()}, window_extent{window_extent}, old_swap_chain{std::move(previous)}
+SwapChain::SwapChain(Surface& surface, PhysicalDevice& physical_device, Device& logical_device, VulkanMemoryAllocator& memory_allocator, VkExtent2D window_extent, std::shared_ptr<SwapChain> previous)
+    : surface{surface}, physical_device{physical_device}, logical_device{logical_device}, memory_allocator{memory_allocator},
+    graphics_queue{logical_device.getGraphicsQueue()}, present_queue{logical_device.getPresentQueue()}, window_extent{window_extent}, old_swap_chain{std::move(previous)}
 {
     initializeSwapChain();
 
@@ -198,6 +199,60 @@ void SwapChain::createImageViews()
             throw std::runtime_error("failed to create texture image view!");
         }
     }
+}
+
+void SwapChain::createDepthResources()
+{
+    swap_chain_depth_image_format = findDepthFormat();
+    VkExtent2D swap_chain_extent = getSwapChainExtent();
+
+    swap_chain_depth_images.resize(MAX_FRAMES_IN_FLIGHT);
+    swap_chain_depth_image_views.resize(MAX_FRAMES_IN_FLIGHT);
+
+    VkImageCreateInfo image_info{};
+    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_info.imageType = VK_IMAGE_TYPE_2D;
+    image_info.extent.width = swap_chain_extent.width;
+    image_info.extent.height = swap_chain_extent.height;
+    image_info.extent.depth = 1;
+    image_info.mipLevels = 1;
+    image_info.arrayLayers = 1;
+    image_info.format = swap_chain_depth_image_format;
+    image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_info.flags = 0;
+
+    VkImageViewCreateInfo view_info{};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    view_info.format = swap_chain_depth_image_format;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.levelCount = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.layerCount = 1;
+
+    for (int i = 0; i < swap_chain_depth_images.size(); i++)
+    {
+        swap_chain_depth_images[i] = memory_allocator.createImage(image_info);
+
+        view_info.image = swap_chain_depth_images[i]->getImage();
+        if (vkCreateImageView(logical_device.handle(), &view_info, VulkanDefines::NO_CALLBACK, &swap_chain_depth_image_views[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create texture image view!");
+        }
+    }
+}
+
+VkFormat SwapChain::findDepthFormat()
+{
+    return physical_device.findSupportedFormat(
+            {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
 void SwapChain::createSyncObjects()

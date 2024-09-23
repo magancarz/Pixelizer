@@ -28,6 +28,7 @@ void Model::createVertexBuffer(VulkanMemoryAllocator& memory_allocator, const st
     vertex_buffer_info.usage_flags =
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vertex_buffer_info.required_memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     vertex_buffer = memory_allocator.createBuffer(vertex_buffer_info);
     vertex_buffer->copyFrom(*staging_buffer);
@@ -48,6 +49,7 @@ void Model::createIndexBuffer(VulkanMemoryAllocator& memory_allocator, const std
     index_buffer_info.usage_flags =
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    index_buffer_info.required_memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     index_buffer = memory_allocator.createBuffer(index_buffer_info);
     index_buffer->copyFrom(*staging_buffer);

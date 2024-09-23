@@ -42,12 +42,12 @@ void Renderer::recreateSwapChain()
 
     if (swap_chain == nullptr)
     {
-        swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, extent);
+        swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, memory_allocator, extent);
     }
     else
     {
         std::shared_ptr<SwapChain> old_swap_chain = std::move(swap_chain);
-        swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, extent, old_swap_chain);
+        swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, memory_allocator, extent, old_swap_chain);
 
         if (!old_swap_chain->compareSwapChainFormats(*swap_chain))
         {
@@ -130,13 +130,12 @@ void Renderer::createSimplePipeline()
     pipeline_rendering_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &swap_chain_image_format;
+    pipeline_rendering_create_info.depthAttachmentFormat = swap_chain->getSwapChainDepthImageFormat();
 
     PipelineConfigInfo config_info{};
     Pipeline::defaultPipelineConfigInfo(config_info);
     config_info.pipeline_layout = simple_pipeline_layout;
     config_info.rendering_create_info = pipeline_rendering_create_info;
-    config_info.binding_descriptions = VulkanUtils::getVertexBindingDescriptions();
-    config_info.attribute_descriptions = VulkanUtils::getVertexAttributeDescriptions();
 
     simple_pipeline = std::make_unique<Pipeline>
     (
@@ -275,6 +274,17 @@ void Renderer::beginRenderPass(VkCommandBuffer command_buffer)
     color_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     color_attachment_info.clearValue = clear_value;
 
+    VkClearValue depth_clear_value{};
+    depth_clear_value.depthStencil = VkClearDepthStencilValue{.depth = 1.0f, .stencil = 0};
+
+    VkRenderingAttachmentInfoKHR depth_attachment_info{};
+    depth_attachment_info.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    depth_attachment_info.imageView = swap_chain->getDepthImageView(current_image_index);
+    depth_attachment_info.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    depth_attachment_info.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depth_attachment_info.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    depth_attachment_info.clearValue = depth_clear_value;
+
     VkRect2D render_area{};
     render_area.offset = {0, 0};
     render_area.extent = swap_chain->getSwapChainExtent();
@@ -285,6 +295,7 @@ void Renderer::beginRenderPass(VkCommandBuffer command_buffer)
     render_info.layerCount = 1;
     render_info.colorAttachmentCount = 1;
     render_info.pColorAttachments = &color_attachment_info;
+    render_info.pDepthAttachment = &depth_attachment_info;
 
     pvkCmdBeginRenderingKHR(command_buffer, &render_info);
 

@@ -20,13 +20,12 @@ public:
 
     [[nodiscard]] std::string getName() const { return texture_info.name; }
 
-    [[nodiscard]] VkSampler getSampler() const { return sampler; }
     [[nodiscard]] VkImageView getImageView() const { return image_view; }
+    [[nodiscard]] VkSampler getSampler() const { return sampler; }
     [[nodiscard]] VkImageLayout getImageLayout() const { return image_layout; }
 
     [[nodiscard]] VkDescriptorImageInfo descriptorInfo() const;
 
-    [[nodiscard]] bool isOpaque() const { return texture_info.is_opaque; }
     [[nodiscard]] uint32_t width() const { return texture_info.width; }
     [[nodiscard]] uint32_t height() const { return texture_info.height; }
 
@@ -42,12 +41,10 @@ private:
     void createImageSampler();
 
     void copyDataToImage(VulkanMemoryAllocator& memory_allocator, const std::vector<unsigned char>& texture_data);
-    void copyBufferToImage(VkBuffer buffer);
     void transitionImageLayout(VkImageLayout old_layout, VkImageLayout new_layout);
     void generateMipmaps();
 
     VkImageView image_view{VK_NULL_HANDLE};
     VkSampler sampler{VK_NULL_HANDLE};
-
     VkImageLayout image_layout{VK_IMAGE_LAYOUT_UNDEFINED};
 };
