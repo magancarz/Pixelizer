@@ -28,7 +28,7 @@ public:
     virtual Material* fetchMaterial(const std::string& material_name);
     virtual std::vector<Material*> fetchRequiredMaterials(const std::vector<std::string>& required_materials);
 
-    virtual TextureData* fetchTexture(const std::string& texture_name);
+    virtual Texture* fetchTexture(const std::string& texture_name);
 
 protected:
     VulkanSystem& vulkan_facade;
@@ -46,7 +46,7 @@ protected:
 
     std::unordered_map<std::string, std::unique_ptr<Material>> available_materials;
 
-    TextureData* storeTexture(const TextureData& texture_data);
+    Texture* storeTexture(const TextureData& texture_data);
 
-    std::unordered_map<std::string, std::unique_ptr<TextureData>> available_textures;
+    std::unordered_map<std::string, std::unique_ptr<Texture>> available_textures;
 };

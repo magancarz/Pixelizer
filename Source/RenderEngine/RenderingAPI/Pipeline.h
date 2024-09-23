@@ -21,7 +21,11 @@ public:
     Pipeline& operator=(const Pipeline&) = delete;
 
     void bind(VkCommandBuffer command_buffer);
-    void bindDescriptorSets(VkCommandBuffer command_buffer, VkDescriptorSet* descriptor_sets, uint32_t descriptor_set_count);
+    void bindDescriptorSets(
+        VkCommandBuffer command_buffer,
+        const VkDescriptorSet* descriptor_sets,
+        uint32_t first_set,
+        uint32_t descriptor_set_count);
 
     template <typename T>
     void pushConstants(VkCommandBuffer command_buffer, VkShaderStageFlagBits shader_stage_flag_bits, uint32_t offset, T* push_constant)

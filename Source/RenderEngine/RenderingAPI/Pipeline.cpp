@@ -29,13 +29,17 @@ void Pipeline::bind(VkCommandBuffer command_buffer)
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
 }
 
-void Pipeline::bindDescriptorSets(VkCommandBuffer command_buffer, VkDescriptorSet* descriptor_sets, uint32_t descriptor_set_count)
+void Pipeline::bindDescriptorSets(
+        VkCommandBuffer command_buffer,
+        const VkDescriptorSet* descriptor_sets,
+        uint32_t first_set,
+        uint32_t descriptor_set_count)
 {
     vkCmdBindDescriptorSets(
         command_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         pipeline_layout,
-        0,
+        first_set,
         descriptor_set_count,
         descriptor_sets,
         0,

@@ -108,7 +108,11 @@ void Renderer::createSimplePipeline()
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(PushConstantData);
 
-    std::vector<VkDescriptorSetLayout> descriptor_set_layouts{camera_descriptor_set_layout->getDescriptorSetLayout()};
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts
+    {
+        camera_descriptor_set_layout->getDescriptorSetLayout(),
+        Material::getMaterialDescriptorSetLayout().getDescriptorSetLayout()
+    };
 
     VkPipelineLayoutCreateInfo pipeline_layout_info{};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -164,15 +168,20 @@ void Renderer::render(FrameInfo& frame_info)
         camera_ubo.view = frame_info.camera_view_matrix;
         camera_ubo.projection = frame_info.camera_projection_matrix;
         camera_uniform_buffers[current_image_index]->writeToBuffer(&camera_ubo);
-        simple_pipeline->bindDescriptorSets(command_buffer, &camera_descriptor_set_handles[current_image_index], 1);
+        simple_pipeline->bindDescriptorSets(command_buffer, &camera_descriptor_set_handles[current_image_index], 0, 1);
 
         PushConstantData push_constant_data{};
         push_constant_data.model = frame_info.model_matrix;
         push_constant_data.normal = frame_info.normal_matrix;
         simple_pipeline->pushConstants(command_buffer, VK_SHADER_STAGE_VERTEX_BIT, 0, &push_constant_data);
 
-        frame_info.rendered_model->models.front()->bind(command_buffer);
-        frame_info.rendered_model->models.front()->draw(command_buffer);
+        Model* rendered_model = frame_info.rendered_model->models.front();
+        rendered_model->bind(command_buffer);
+
+        Material* rendered_material = frame_info.rendered_model->materials.front();
+        simple_pipeline->bindDescriptorSets(command_buffer, &rendered_material->getMaterialDescriptorSet(), 1, 1);
+
+        rendered_model->draw(command_buffer);
 
         endRenderPass(command_buffer);
 

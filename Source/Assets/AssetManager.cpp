@@ -1,13 +1,16 @@
 #include "AssetManager.h"
 
-#include "Defines.h"
 #include "Logs/LogSystem.h"
 #include "OBJ/OBJLoader.h"
-#include "Assets/Material/VeraMaterialLoader.h"
+#include "Texture/TextureInfo.h"
 #include "Texture/TextureLoader.h"
+#include "RenderEngine/RenderingAPI/Textures/Texture.h"
 
 AssetManager::AssetManager(VulkanSystem& vulkan_facade, VulkanMemoryAllocator& memory_allocator)
-    : vulkan_facade{vulkan_facade}, memory_allocator{memory_allocator} {}
+    : vulkan_facade{vulkan_facade}, memory_allocator{memory_allocator}
+{
+    Material::initializeMaterials(vulkan_facade.getLogicalDevice());
+}
 
 Mesh* AssetManager::fetchMesh(const std::string& mesh_name)
 {
@@ -59,7 +62,7 @@ Material* AssetManager::storeMaterial(const MaterialData& material_data)
     MaterialInfo material_info{};
     material_info.name = material_data.name;
     material_info.diffuse_texture = fetchTexture(material_data.diffuse_texture_name);
-    available_materials.try_emplace(material_data.name, std::make_unique<Material>(material_info));
+    available_materials.try_emplace(material_data.name, std::make_unique<Material>(vulkan_facade.getLogicalDevice(), material_info));
     return available_materials[material_data.name].get();
 }
 
@@ -98,8 +101,7 @@ Material* AssetManager::fetchMaterial(const std::string& material_name)
         return available_materials[material_name].get();
     }
 
-    LogSystem::log(LogSeverity::LOG, "Material was not found in available materials list. Loading from file...");
-    return storeMaterial(VeraMaterialLoader::loadAssetFromFile(material_name));
+    assert(false && "Material not found in available materials list!");
 }
 
 std::vector<Material*> AssetManager::fetchRequiredMaterials(const std::vector<std::string>& required_materials)
@@ -113,7 +115,7 @@ std::vector<Material*> AssetManager::fetchRequiredMaterials(const std::vector<st
     return materials;
 }
 
-TextureData* AssetManager::fetchTexture(const std::string& texture_name)
+Texture* AssetManager::fetchTexture(const std::string& texture_name)
 {
     LogSystem::log(LogSeverity::LOG, "Fetching texture named ", texture_name.c_str());
     if (available_textures.contains(texture_name))
@@ -126,7 +128,7 @@ TextureData* AssetManager::fetchTexture(const std::string& texture_name)
     return storeTexture(TextureLoader::loadFromAssetFile(texture_name));
 }
 
-TextureData* AssetManager::storeTexture(const TextureData& texture_data)
+Texture* AssetManager::storeTexture(const TextureData& texture_data)
 {
     if (available_textures.contains(texture_data.name))
     {
@@ -134,7 +136,24 @@ TextureData* AssetManager::storeTexture(const TextureData& texture_data)
         return available_textures.at(texture_data.name).get();
     }
 
-    available_textures.try_emplace(texture_data.name, std::make_unique<TextureData>(texture_data));
+    TextureInfo texture_info{};
+    texture_info.name = texture_data.name;
+    texture_info.width = texture_data.width;
+    texture_info.height = texture_data.height;
+    texture_info.format = texture_data.format;
+    texture_info.mip_levels = texture_data.mip_levels;
+
+    auto texture = std::make_unique<Texture>
+    (
+        vulkan_facade.getPhysicalDevice(),
+        vulkan_facade.getLogicalDevice(),
+        vulkan_facade.getTransferCommandPool(),
+        memory_allocator,
+        texture_info
+    );
+    texture->writeTextureData(texture_data.data);
+
+    available_textures.try_emplace(texture_data.name, std::move(texture));
 
     return available_textures.at(texture_data.name).get();
 }

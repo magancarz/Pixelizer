@@ -8,7 +8,7 @@
 #include "Assets/Defines.h"
 #include "Logs/LogSystem.h"
 #include "Utils/PathBuilder.h"
-#include "RenderEngine/Textures/Texture.h"
+#include "RenderEngine/RenderingAPI/Textures/Texture.h"
 
 TextureData TextureLoader::loadFromAssetFile(const std::string& texture_name)
 {
@@ -34,8 +34,6 @@ TextureData TextureLoader::loadFromAssetFile(const std::string& texture_name)
     memcpy(copied_data.data(), data, copied_data.size() * sizeof(unsigned char));
     stbi_image_free(data);
 
-    bool is_opaque = EXPECTED_NUMBER_OF_CHANNELS <= 3 || copied_data[3] > 127;
-
     return TextureData
     {
         .name = texture_name,
@@ -43,6 +41,6 @@ TextureData TextureLoader::loadFromAssetFile(const std::string& texture_name)
         .height = static_cast<uint32_t>(height),
         .number_of_channels = static_cast<uint32_t>(EXPECTED_NUMBER_OF_CHANNELS),
         .data = std::move(copied_data),
-        .is_opaque = is_opaque
+        .mip_levels = 1
     };
 }

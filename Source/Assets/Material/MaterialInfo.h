@@ -9,5 +9,5 @@ class Texture;
 struct MaterialInfo
 {
     std::string name;
-    TextureData* diffuse_texture{nullptr};
+    Texture* diffuse_texture{nullptr};
 };

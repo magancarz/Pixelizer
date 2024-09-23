@@ -8,51 +8,36 @@
 Texture::Texture(
         PhysicalDevice& physical_device,
         Device& logical_device,
-        CommandPool& transfer_command_pool,
+        const CommandPool& transfer_command_pool,
         VulkanMemoryAllocator& memory_allocator,
-        const VkImageCreateInfo& image_create_info,
-        const TextureData& texture_info)
+        const TextureInfo& texture_info)
     : physical_device{physical_device}, logical_device{logical_device}, transfer_command_pool{transfer_command_pool},
-    image_create_info{image_create_info}, texture_info{texture_info}, image_buffer{std::move(image_buffer)}
+    memory_allocator{memory_allocator}, texture_info{texture_info}
 {
-    copyDataToImage(memory_allocator, texture_info.data);
+    createImage();
     createImageView();
     createImageSampler();
-    generateMipmaps();
-    transitionImageLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 }
 
-void Texture::copyDataToImage(VulkanMemoryAllocator& memory_allocator, const std::vector<unsigned char>& texture_data)
+void Texture::createImage()
 {
-    transitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-    auto buffer = memory_allocator.createStagingBuffer(4, texture_info.width * texture_info.height, texture_data.data());
+    texture_info.format = texture_info.format == VK_FORMAT_UNDEFINED ? VK_FORMAT_R8G8B8A8_SRGB : texture_info.format;
 
-    SingleTimeCommandBuffer single_time_command_buffer = transfer_command_pool.createSingleTimeCommandBuffer();
-    VkCommandBuffer command_buffer = single_time_command_buffer.beginRecording();
-
-    VkBufferImageCopy region{};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {texture_info.width, texture_info.height, 1};
-
-    vkCmdCopyBufferToImage(
-        command_buffer,
-        buffer->getBuffer(),
-        image_buffer->getImage(),
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &region);
-
-    const Fence& fence = single_time_command_buffer.endRecordingAndSubmit();
-    fence.wait();
+    VkImageCreateInfo image_create_info{};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.extent.width = texture_info.width;
+    image_create_info.extent.height = texture_info.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = texture_info.mip_levels;
+    image_create_info.arrayLayers = 1;
+    image_create_info.format = texture_info.format;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+    image = memory_allocator.createImage(image_create_info);
 }
 
 void Texture::createImageView()
@@ -67,7 +52,7 @@ void Texture::createImageView()
     image_view_create_info.subresourceRange.baseArrayLayer = 0;
     image_view_create_info.subresourceRange.layerCount = 1;
     image_view_create_info.subresourceRange.levelCount = texture_info.mip_levels;
-    image_view_create_info.image = image_buffer->getImage();
+    image_view_create_info.image = image->getImage();
 
     if (vkCreateImageView(logical_device.handle(), &image_view_create_info, VulkanDefines::NO_CALLBACK, &image_view) != VK_SUCCESS)
     {
@@ -99,6 +84,49 @@ void Texture::createImageSampler()
     }
 }
 
+Texture::~Texture()
+{
+    vkDestroyImageView(logical_device.handle(), image_view, VulkanDefines::NO_CALLBACK);
+    vkDestroySampler(logical_device.handle(), sampler, VulkanDefines::NO_CALLBACK);
+}
+
+void Texture::writeTextureData(const std::vector<unsigned char>& data)
+{
+    assert(image_layout == VK_IMAGE_LAYOUT_UNDEFINED && "Current implementation asserts that texture will be written right after its creation.");
+    transitionImageLayout(VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    auto buffer = memory_allocator.createStagingBuffer(4, texture_info.width * texture_info.height, data.data());
+
+    SingleTimeCommandBuffer single_time_command_buffer = transfer_command_pool.createSingleTimeCommandBuffer();
+    VkCommandBuffer command_buffer = single_time_command_buffer.beginRecording();
+
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {texture_info.width, texture_info.height, 1};
+
+    vkCmdCopyBufferToImage(
+        command_buffer,
+        buffer->getBuffer(),
+        image->getImage(),
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region);
+
+    const Fence& fence = single_time_command_buffer.endRecordingAndSubmit();
+    fence.wait();
+
+    generateMipmaps();
+}
+
 void Texture::transitionImageLayout(VkImageLayout old_layout, VkImageLayout new_layout)
 {
     SingleTimeCommandBuffer single_time_command_buffer = transfer_command_pool.createSingleTimeCommandBuffer();
@@ -110,7 +138,7 @@ void Texture::transitionImageLayout(VkImageLayout old_layout, VkImageLayout new_
     barrier.newLayout = new_layout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image_buffer->getImage();
+    barrier.image = image->getImage();
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = texture_info.mip_levels;
@@ -188,7 +216,7 @@ void Texture::generateMipmaps()
 
     VkImageMemoryBarrier barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = image_buffer->getImage();
+    barrier.image = image->getImage();
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -235,9 +263,9 @@ void Texture::generateMipmaps()
 
         vkCmdBlitImage(
             command_buffer,
-            image_buffer->getImage(),
+            image->getImage(),
             VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            image_buffer->getImage(),
+            image->getImage(),
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             1,
             &blit,
@@ -286,12 +314,6 @@ void Texture::generateMipmaps()
     fence.wait();
 
     image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-}
-
-Texture::~Texture()
-{
-    vkDestroyImageView(logical_device.handle(), image_view, VulkanDefines::NO_CALLBACK);
-    vkDestroySampler(logical_device.handle(), sampler, VulkanDefines::NO_CALLBACK);
 }
 
 VkDescriptorImageInfo Texture::descriptorInfo() const
