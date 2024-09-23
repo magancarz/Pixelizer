@@ -6,7 +6,7 @@ layout (location = 2) in vec2 fragment_uv;
 
 layout (location = 0) out vec4 out_color;
 
-const vec3 light_position = vec3(5.0, 5.0, -5.0);
+const vec3 light_position = vec3(5.0, 0.0, 0.0);
 
 void main()
 {

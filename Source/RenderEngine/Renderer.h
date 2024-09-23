@@ -70,8 +70,6 @@ private:
     VkPipelineLayout simple_pipeline_layout{VK_NULL_HANDLE};
     std::unique_ptr<Pipeline> simple_pipeline;
 
-    Model* model;
-
     VkCommandBuffer beginFrame();
     void endFrame(VkCommandBuffer graphics_command_buffer);
 

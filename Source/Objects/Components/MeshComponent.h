@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <memory>
 
 #include "ObjectComponent.h"
 #include "Assets/Model/MeshDescription.h"

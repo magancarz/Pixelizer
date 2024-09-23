@@ -11,6 +11,7 @@
 #include "RenderingAPI/Descriptors/DescriptorPoolBuilder.h"
 #include "RenderingAPI/Descriptors/DescriptorSetLayoutBuilder.h"
 #include "Common/CameraUBO.h"
+#include "Common/PushConstantData.h"
 
 Renderer::Renderer(
         Window& window,
@@ -21,8 +22,7 @@ Renderer::Renderer(
         VulkanMemoryAllocator& memory_allocator,
         AssetManager& asset_manager)
     : window{window}, surface{surface}, physical_device{physical_device}, device{logical_device},
-    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager},
-    model{asset_manager.fetchModel("Suzanne")}
+    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager}
 {
     recreateSwapChain();
     createCommandBuffers();
@@ -103,10 +103,10 @@ void Renderer::createCameraDescriptorSet()
 
 void Renderer::createSimplePipeline()
 {
-    // VkPushConstantRange push_constant_range{};
-    // push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    // push_constant_range.offset = 0;
-    // push_constant_range.size = sizeof(SimplePushConstantData);
+    VkPushConstantRange push_constant_range{};
+    push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    push_constant_range.offset = 0;
+    push_constant_range.size = sizeof(PushConstantData);
 
     std::vector<VkDescriptorSetLayout> descriptor_set_layouts{camera_descriptor_set_layout->getDescriptorSetLayout()};
 
@@ -114,8 +114,9 @@ void Renderer::createSimplePipeline()
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
     pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
-    // pipeline_layout_info.pushConstantRangeCount = 1;
-    // pipeline_layout_info.pPushConstantRanges = &push_constant_range;
+
+    pipeline_layout_info.pushConstantRangeCount = 1;
+    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
 
     if (vkCreatePipelineLayout(device.handle(), &pipeline_layout_info, VulkanDefines::NO_CALLBACK, &simple_pipeline_layout) != VK_SUCCESS)
     {
@@ -155,19 +156,23 @@ void Renderer::render(FrameInfo& frame_info)
         frame_info.window_size = swap_chain->getSwapChainExtent();
         frame_info.frame_index = swap_chain->getCurrentFrameIndex();
 
-        CameraUBO camera_ubo{};
-        camera_ubo.view = frame_info.camera_view_matrix;
-        camera_ubo.projection = frame_info.camera_projection_matrix;
-
-        camera_uniform_buffers[current_image_index]->writeToBuffer(&camera_ubo);
-
         beginRenderPass(command_buffer);
 
         simple_pipeline->bind(command_buffer);
+
+        CameraUBO camera_ubo{};
+        camera_ubo.view = frame_info.camera_view_matrix;
+        camera_ubo.projection = frame_info.camera_projection_matrix;
+        camera_uniform_buffers[current_image_index]->writeToBuffer(&camera_ubo);
         simple_pipeline->bindDescriptorSets(command_buffer, &camera_descriptor_set_handles[current_image_index], 1);
 
-        model->bind(command_buffer);
-        model->draw(command_buffer);
+        PushConstantData push_constant_data{};
+        push_constant_data.model = frame_info.model_matrix;
+        push_constant_data.normal = frame_info.normal_matrix;
+        simple_pipeline->pushConstants(command_buffer, VK_SHADER_STAGE_VERTEX_BIT, 0, &push_constant_data);
+
+        frame_info.rendered_model->models.front()->bind(command_buffer);
+        frame_info.rendered_model->models.front()->draw(command_buffer);
 
         endRenderPass(command_buffer);
 

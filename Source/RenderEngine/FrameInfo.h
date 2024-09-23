@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
 
+class Mesh;
 class Object;
 
 struct FrameInfo
@@ -14,4 +15,8 @@ struct FrameInfo
 
     glm::mat4 camera_view_matrix{1.f};
     glm::mat4 camera_projection_matrix{1.f};
+
+    Mesh* rendered_model{nullptr};
+    glm::mat4 model_matrix{1.f};
+    glm::mat4 normal_matrix{1.f};
 };
