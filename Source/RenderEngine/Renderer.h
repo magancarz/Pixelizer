@@ -65,16 +65,31 @@ private:
     std::unique_ptr<DescriptorSetLayout> camera_descriptor_set_layout;
     std::array<VkDescriptorSet, SwapChain::MAX_FRAMES_IN_FLIGHT> camera_descriptor_set_handles;
 
+    void createRenderedToTextures();
     void createSimplePipeline();
+
+    std::vector<std::unique_ptr<Texture>> rendered_to_textures;
 
     VkPipelineLayout simple_pipeline_layout{VK_NULL_HANDLE};
     std::unique_ptr<Pipeline> simple_pipeline;
 
-    VkCommandBuffer beginFrame();
-    void endFrame(VkCommandBuffer graphics_command_buffer);
+    void createPostProcessingPipeline();
 
-    void beginRenderPass(VkCommandBuffer command_buffer);
-    void endRenderPass(VkCommandBuffer command_buffer);
+    std::unique_ptr<DescriptorSetLayout> post_processed_image_descriptor_set_layout;
+    std::array<VkDescriptorSet, SwapChain::MAX_FRAMES_IN_FLIGHT> post_processed_image_descriptor_set_handles;
+    VkPipelineLayout post_processing_pipeline_layout{VK_NULL_HANDLE};
+    std::unique_ptr<Pipeline> post_processing_pipeline;
+
+    VkCommandBuffer beginFrame();
+    void endFrame(VkCommandBuffer command_buffer);
+
+    void renderModel(FrameInfo& frame_info);
+    void beginRenderingModelRenderPass(VkCommandBuffer command_buffer);
+    void endRenderingModelRenderPass(VkCommandBuffer command_buffer);
+
+    void applyPostProcessing(FrameInfo& frame_info);
+    void beginPostProcessingRenderPass(VkCommandBuffer command_buffer);
+    void endPostProcessingRenderPass(VkCommandBuffer command_buffer);
 
     bool is_frame_in_progress{false};
     int current_frame_index{0};

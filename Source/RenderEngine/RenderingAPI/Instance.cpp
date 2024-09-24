@@ -13,6 +13,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         void* user_data)
 {
     LogSeverity severity;
+
     switch (message_severity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
@@ -25,6 +26,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         severity = LogSeverity::LOG;
         break;
     }
+
     LogSystem::log(severity, Instance::VALIDATION_LAYERS_PREFIX, callback_data->pMessage);
 
     return VK_FALSE;

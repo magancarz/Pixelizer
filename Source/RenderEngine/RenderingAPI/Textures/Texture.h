@@ -22,6 +22,7 @@ public:
     [[nodiscard]] std::string getName() const { return texture_info.name; }
 
     [[nodiscard]] VkSampler getSampler() const { return sampler; }
+    [[nodiscard]] VkImage getImage() const { return image->getImage(); }
     [[nodiscard]] VkImageView getImageView() const { return image_view; }
     [[nodiscard]] VkImageLayout getImageLayout() const { return image_layout; }
 

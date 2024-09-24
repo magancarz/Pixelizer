@@ -11,7 +11,7 @@ CameraComponent::CameraComponent(Object& owner, TransformComponent& transform_co
 
 void CameraComponent::update(FrameInfo& frame_info)
 {
-    setCameraView(transform_component.getRotationInEulerAngles());
+    updateCameraView(transform_component.getRotationInEulerAngles());
 
     frame_info.camera_view_matrix = view;
     frame_info.camera_projection_matrix = projection;
@@ -24,7 +24,7 @@ void CameraComponent::setPerspectiveProjection(float fovy, float aspect)
     projection[1][1] *= -1;
 }
 
-void CameraComponent::setCameraView(glm::vec3 rotation)
+void CameraComponent::updateCameraView(glm::vec3 rotation)
 {
     glm::mat4 rotation_matrix = glm::rotate(glm::mat4{1.0f}, rotation.x, glm::vec3{1, 0, 0});
     rotation_matrix = glm::rotate(rotation_matrix, rotation.y, glm::vec3{0, -1, 0});
