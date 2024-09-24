@@ -14,6 +14,6 @@ void main()
 {
     vec3 basic_color = texture(diffuse_texture, fragment_uv).xyz;
     vec3 to_light_vector = normalize(light_position - fragment_position);
-    basic_color *= dot(to_light_vector, fragment_normal);
+    basic_color *= max(0.02, dot(to_light_vector, fragment_normal));
     out_color = vec4(basic_color, 1.0);
 }

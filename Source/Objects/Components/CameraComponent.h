@@ -13,7 +13,7 @@ public:
     void update(FrameInfo& frame_info) override;
 
     void setPerspectiveProjection(float fovy, float aspect);
-    void setViewYXZ(glm::vec3 position, glm::vec3 rotation);
+    void setCameraView(glm::vec3 rotation);
 
     [[nodiscard]] const glm::mat4& getProjection() const { return projection; }
     [[nodiscard]] const glm::mat4& getView() const { return view; }
@@ -24,6 +24,9 @@ public:
 private:
     glm::mat4 projection{1.f};
     glm::mat4 view{1.f};
+
+    static constexpr glm::vec3 CAMERA_FRONT{0, 0, 1};
+    float arm_length{10.0f};
 
     TransformComponent& transform_component;
 };

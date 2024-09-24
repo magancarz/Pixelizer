@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "glm/ext/matrix_clip_space.hpp"
 #include "RenderEngine/FrameInfo.h"
 #include "Objects/Object.h"
 
@@ -10,7 +11,7 @@ CameraComponent::CameraComponent(Object& owner, TransformComponent& transform_co
 
 void CameraComponent::update(FrameInfo& frame_info)
 {
-    setViewYXZ(transform_component.getLocation(), transform_component.getRotationInEulerAngles());
+    setCameraView(transform_component.getRotationInEulerAngles());
 
     frame_info.camera_view_matrix = view;
     frame_info.camera_projection_matrix = projection;
@@ -19,32 +20,15 @@ void CameraComponent::update(FrameInfo& frame_info)
 void CameraComponent::setPerspectiveProjection(float fovy, float aspect)
 {
     assert(glm::abs(aspect - std::numeric_limits<float>::epsilon()) > 0.0f);
-    const float tan_half_fov_y = glm::tan(fovy / 2.f);
-    projection = glm::mat4{0.0f};
-    projection[0][0] = 1.f / (aspect * tan_half_fov_y);
-    projection[1][1] = -1.f / tan_half_fov_y;
-    projection[2][2] = CAMERA_FAR / (CAMERA_FAR - CAMERA_NEAR);
-    projection[2][3] = 1.f;
-    projection[3][2] = -(CAMERA_FAR * CAMERA_NEAR) / (CAMERA_FAR - CAMERA_NEAR);
+    projection = glm::perspective(glm::radians(fovy), aspect, CAMERA_NEAR, CAMERA_FAR);
+    projection[1][1] *= -1;
 }
 
-void CameraComponent::setViewYXZ(glm::vec3 position, glm::vec3 rotation)
+void CameraComponent::setCameraView(glm::vec3 rotation)
 {
-    const float c3 = glm::cos(rotation.z);
-    const float s3 = glm::sin(rotation.z);
-    const float c2 = glm::cos(rotation.x);
-    const float s2 = glm::sin(rotation.x);
-    const float c1 = glm::cos(rotation.y);
-    const float s1 = glm::sin(rotation.y);
-    const glm::vec3 u{(c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1)};
-    const glm::vec3 v{(c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3)};
-    const glm::vec3 w{(c2 * s1), (-s2), (c1 * c2)};
-
-    view = glm::mat4
-    {
-        {u.x, v.x, w.x, 0.0f},
-        {u.y, v.y, w.y, 0.0f},
-        {u.z, v.z, w.z, 0.0f},
-        {-glm::dot(u, position), -glm::dot(v, position), -glm::dot(w, position), 1.0f}
-    };
+    glm::mat4 rotation_matrix = glm::rotate(glm::mat4{1.0f}, rotation.x, glm::vec3{1, 0, 0});
+    rotation_matrix = glm::rotate(rotation_matrix, rotation.y, glm::vec3{0, -1, 0});
+    const glm::vec3 forward_direction = CAMERA_FRONT * glm::mat3{rotation_matrix};
+    const glm::vec3 backward_direction = -forward_direction;
+    view = glm::lookAt(arm_length * backward_direction, glm::vec3{0}, glm::vec3{0, 1, 0});
 }
