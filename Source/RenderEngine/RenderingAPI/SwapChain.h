@@ -20,10 +20,10 @@ public:
     SwapChain& operator=(const SwapChain&) = delete;
 
     [[nodiscard]] uint32_t getCurrentFrameIndex() const { return current_frame; }
-    [[nodiscard]] VkImageView getImageView(int index) const { return swap_chain_image_views[index]; }
-    [[nodiscard]] VkImageView getDepthImageView(int index) const { return swap_chain_depth_image_views[index]; }
-    [[nodiscard]] VkImage getImage(int index) const { return swap_chain_images[index]; }
-    [[nodiscard]] VkImage getDepthImage(int index) const { return swap_chain_depth_images[index]->getImage(); }
+    [[nodiscard]] VkImageView getImageView(uint32_t index) const { return swap_chain_image_views[index]; }
+    [[nodiscard]] VkImageView getDepthImageView(uint32_t index) const { return swap_chain_depth_image_views[index]; }
+    [[nodiscard]] VkImage getImage(uint32_t index) const { return swap_chain_images[index]; }
+    [[nodiscard]] VkImage getDepthImage(uint32_t index) const { return swap_chain_depth_images[index]->getImage(); }
     [[nodiscard]] size_t imageCount() const { return swap_chain_images.size(); }
     [[nodiscard]] VkFormat getSwapChainImageFormat() const { return swap_chain_image_format; }
     [[nodiscard]] VkFormat getSwapChainDepthImageFormat() const { return swap_chain_depth_image_format; }

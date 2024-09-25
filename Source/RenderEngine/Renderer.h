@@ -2,6 +2,7 @@
 
 #include "FrameInfo.h"
 #include "Assets/AssetManager.h"
+#include "Editor/UI/UI.h"
 #include "Editor/Window/Window.h"
 #include "RenderEngine/RenderingAPI/SwapChain.h"
 #include "RenderEngine/RenderingAPI/CommandBuffer/CommandBuffer.h"
@@ -14,6 +15,7 @@ class Renderer
 public:
     Renderer(
         Window& window,
+        Instance& instance,
         Surface& surface,
         PhysicalDevice& physical_device,
         Device& logical_device,
@@ -29,12 +31,19 @@ public:
 
 private:
     Window& window;
+    Instance& instance;
     Surface& surface;
     PhysicalDevice& physical_device;
     Device& device;
     const CommandPool& graphics_command_pool;
     VulkanMemoryAllocator& memory_allocator;
     AssetManager& asset_manager;
+
+    std::unique_ptr<SwapChain> recreateSwapChain();
+
+    std::unique_ptr<SwapChain> swap_chain;
+
+    UI ui{instance, physical_device, device, device.getGraphicsQueue(), window, swap_chain.get()};
 
     [[nodiscard]] const CommandBuffer& getCurrentCommandBuffer() const
     {
@@ -47,10 +56,6 @@ private:
         assert(is_frame_in_progress && "Cannot get frame index when frame not in progress!");
         return current_frame_index;
     }
-
-    void recreateSwapChain();
-
-    std::unique_ptr<SwapChain> swap_chain;
 
     void createCommandBuffers();
     void freeCommandBuffers();

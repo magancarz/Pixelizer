@@ -16,16 +16,17 @@
 
 Renderer::Renderer(
         Window& window,
+        Instance& instance,
         Surface& surface,
         PhysicalDevice& physical_device,
         Device& logical_device,
         const CommandPool& graphics_command_pool,
         VulkanMemoryAllocator& memory_allocator,
         AssetManager& asset_manager)
-    : window{window}, surface{surface}, physical_device{physical_device}, device{logical_device},
-    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager}
+    : window{window}, instance{instance}, surface{surface}, physical_device{physical_device}, device{logical_device},
+    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager},
+    swap_chain{recreateSwapChain()}
 {
-    recreateSwapChain();
     createCommandBuffers();
     createCameraDescriptorSet();
     createRenderedToTextures();
@@ -33,7 +34,7 @@ Renderer::Renderer(
     createPostProcessingPipeline();
 }
 
-void Renderer::recreateSwapChain()
+std::unique_ptr<SwapChain> Renderer::recreateSwapChain()
 {
     auto extent = window.getExtent();
     while (extent.width == 0 || extent.height == 0)
@@ -45,18 +46,18 @@ void Renderer::recreateSwapChain()
 
     if (swap_chain == nullptr)
     {
-        swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, memory_allocator, extent);
+        return std::make_unique<SwapChain>(surface, physical_device, device, memory_allocator, extent);
     }
-    else
-    {
-        std::shared_ptr<SwapChain> old_swap_chain = std::move(swap_chain);
-        swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, memory_allocator, extent, old_swap_chain);
 
-        if (!old_swap_chain->compareSwapChainFormats(*swap_chain))
-        {
-            throw std::runtime_error("Swap chain image or depth format has changed!");
-        }
+    std::shared_ptr<SwapChain> old_swap_chain = std::move(swap_chain);
+    auto new_swap_chain = std::make_unique<SwapChain>(surface, physical_device, device, memory_allocator, extent, old_swap_chain);
+
+    if (!old_swap_chain->compareSwapChainFormats(*new_swap_chain))
+    {
+        throw std::runtime_error("Swap chain image or depth format has changed!");
     }
+
+    return new_swap_chain;
 }
 
 void Renderer::createCommandBuffers()
@@ -235,12 +236,14 @@ void Renderer::render(FrameInfo& frame_info)
 {
     if (auto command_buffer = beginFrame())
     {
-        frame_info.graphics_command_buffer = command_buffer;
+        frame_info.command_buffer = command_buffer;
         frame_info.window_size = swap_chain->getSwapChainExtent();
         frame_info.frame_index = swap_chain->getCurrentFrameIndex();
 
+        ui.updateUIElements(frame_info);
         renderModel(frame_info);
         applyPostProcessing(frame_info);
+        ui.renderUIElements(frame_info.command_buffer, frame_info.frame_index);
 
         endFrame(command_buffer);
     }
@@ -248,30 +251,30 @@ void Renderer::render(FrameInfo& frame_info)
 
 void Renderer::renderModel(FrameInfo& frame_info)
 {
-    beginRenderingModelRenderPass(frame_info.graphics_command_buffer);
+    beginRenderingModelRenderPass(frame_info.command_buffer);
 
-    simple_pipeline->bind(frame_info.graphics_command_buffer);
+    simple_pipeline->bind(frame_info.command_buffer);
 
     CameraUBO camera_ubo{};
     camera_ubo.view = frame_info.camera_view_matrix;
     camera_ubo.projection = frame_info.camera_projection_matrix;
     camera_uniform_buffers[current_image_index]->writeToBuffer(&camera_ubo);
-    simple_pipeline->bindDescriptorSets(frame_info.graphics_command_buffer, &camera_descriptor_set_handles[current_image_index], 0, 1);
+    simple_pipeline->bindDescriptorSets(frame_info.command_buffer, &camera_descriptor_set_handles[current_image_index], 0, 1);
 
     PushConstantData push_constant_data{};
     push_constant_data.model = frame_info.model_matrix;
     push_constant_data.normal = frame_info.normal_matrix;
-    simple_pipeline->pushConstants(frame_info.graphics_command_buffer, VK_SHADER_STAGE_VERTEX_BIT, 0, &push_constant_data);
+    simple_pipeline->pushConstants(frame_info.command_buffer, VK_SHADER_STAGE_VERTEX_BIT, 0, &push_constant_data);
 
     Model* rendered_model = frame_info.rendered_model->models.front();
-    rendered_model->bind(frame_info.graphics_command_buffer);
+    rendered_model->bind(frame_info.command_buffer);
 
     Material* rendered_material = frame_info.rendered_model->materials.front();
-    simple_pipeline->bindDescriptorSets(frame_info.graphics_command_buffer, &rendered_material->getMaterialDescriptorSet(), 1, 1);
+    simple_pipeline->bindDescriptorSets(frame_info.command_buffer, &rendered_material->getMaterialDescriptorSet(), 1, 1);
 
-    rendered_model->draw(frame_info.graphics_command_buffer);
+    rendered_model->draw(frame_info.command_buffer);
 
-    endRenderingModelRenderPass(frame_info.graphics_command_buffer);
+    endRenderingModelRenderPass(frame_info.command_buffer);
 }
 
 VkCommandBuffer Renderer::beginFrame()
@@ -449,15 +452,19 @@ void Renderer::endRenderingModelRenderPass(VkCommandBuffer command_buffer)
 
 void Renderer::applyPostProcessing(FrameInfo& frame_info)
 {
-    beginPostProcessingRenderPass(frame_info.graphics_command_buffer);
+    beginPostProcessingRenderPass(frame_info.command_buffer);
 
-    post_processing_pipeline->bind(frame_info.graphics_command_buffer);
+    post_processing_pipeline->bind(frame_info.command_buffer);
 
-    post_processing_pipeline->bindDescriptorSets(frame_info.graphics_command_buffer, &post_processed_image_descriptor_set_handles[frame_info.frame_index], 0, 1);
+    post_processing_pipeline->bindDescriptorSets(frame_info.command_buffer, &post_processed_image_descriptor_set_handles[frame_info.frame_index], 0, 1);
 
-    vkCmdDraw(frame_info.graphics_command_buffer, 3, 2, 0, 0);
+    PostProcessingPushConstantData push_constant_data{};
+    push_constant_data.pixelize = frame_info.pixelize;
+    post_processing_pipeline->pushConstants(frame_info.command_buffer, VK_SHADER_STAGE_FRAGMENT_BIT, 0, &push_constant_data);
 
-    endPostProcessingRenderPass(frame_info.graphics_command_buffer);
+    vkCmdDraw(frame_info.command_buffer, 3, 2, 0, 0);
+
+    endPostProcessingRenderPass(frame_info.command_buffer);
 }
 
 void Renderer::beginPostProcessingRenderPass(VkCommandBuffer command_buffer)
@@ -537,32 +544,4 @@ void Renderer::endPostProcessingRenderPass(VkCommandBuffer command_buffer)
     assert(command_buffer == getCurrentCommandBuffer().handle() && "Can't end updateElements pass on command buffer from a different frame!");
 
     pvkCmdEndRenderingKHR(command_buffer);
-
-    VkImageMemoryBarrier image_memory_barrier{};
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    image_memory_barrier.image = swap_chain->getImage(current_image_index);
-    image_memory_barrier.subresourceRange = VkImageSubresourceRange
-    {
-        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .baseMipLevel = 0,
-        .levelCount = 1,
-        .baseArrayLayer = 0,
-        .layerCount = 1,
-    };
-
-    vkCmdPipelineBarrier(
-        command_buffer,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        0,
-        0,
-        nullptr,
-        0,
-        nullptr,
-        1,
-        &image_memory_barrier
-    );
 }
