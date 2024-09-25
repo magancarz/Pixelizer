@@ -69,21 +69,5 @@ endforeach ()
 add_custom_target(SHADERS ALL DEPENDS ${SPV_SHADERS})
 add_dependencies(Pixelizer SHADERS)
 
-include(CTest)
-enable_testing()
 add_subdirectory(ThirdParty/GTest)
-
-if(BUILD_TESTING)
-	file(GLOB_RECURSE SOURCES
-        Source/*.cpp
-        Source/*.h)
-	add_executable(Pixelizer-Tests ${SOURCES})
-	target_link_libraries(Pixelizer-Tests PRIVATE Pixelizer-Lib)
-	target_link_libraries(Pixelizer-Tests PRIVATE GTest::gtest_main)
-	target_link_libraries(Pixelizer-Tests PRIVATE GTest::gmock)
-	include(GoogleTest)
-	target_include_directories(Pixelizer-Tests PRIVATE Tests)
-	add_test(NAME Pixelizer-Tests COMMAND Pixelizer-Tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
-	message("${CMAKE_SOURCE_DIR}")
-	add_subdirectory(Tests)
-endif()
+add_subdirectory(Tests)
