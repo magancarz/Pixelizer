@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-TEST(OBBTests, shouldReportNoIntersectionWithSimpleOBBs)
+TEST(DummyTests, dummyTest)
 {
     // given
 
