@@ -1,7 +1,7 @@
 #include "AssetManager.h"
 
 #include "Logs/LogSystem.h"
-#include "OBJ/OBJLoader.h"
+#include "OBJ/OBJLoaderTests.h"
 #include "Texture/TextureInfo.h"
 #include "Texture/TextureLoader.h"
 #include "RenderEngine/RenderingAPI/Textures/Texture.h"
@@ -22,7 +22,7 @@ Mesh* AssetManager::fetchMesh(const std::string& mesh_name)
     }
 
     LogSystem::log(LogSeverity::LOG, "Mesh was not found in available meshes list. Loading from file...");
-    return storeMesh(OBJLoader::loadMeshFromFile(mesh_name));
+    return storeMesh(OBJLoaderTests::loadMeshFromFile(mesh_name));
 }
 
 Mesh* AssetManager::storeMesh(const MeshData& mesh_data)
@@ -76,43 +76,6 @@ Model* AssetManager::storeModel(const ModelData& model_data)
 
     available_models.try_emplace(model_data.name, std::make_unique<Model>(memory_allocator, model_data));
     return available_models[model_data.name].get();
-}
-
-Model* AssetManager::fetchModel(const std::string& model_name)
-{
-    LogSystem::log(LogSeverity::LOG, "Fetching model named ", model_name.c_str());
-    if (available_models.contains(model_name))
-    {
-        LogSystem::log(LogSeverity::LOG, "Model found in available models list. Returning...");
-        return available_models[model_name].get();
-    }
-
-    LogSystem::log(LogSeverity::WARNING, "Model was not found in available models list. Searching for model in mesh file...");
-    fetchMesh(model_name);
-    return available_models[model_name].get();
-}
-
-Material* AssetManager::fetchMaterial(const std::string& material_name)
-{
-    LogSystem::log(LogSeverity::LOG, "Fetching material named ", material_name.c_str());
-    if (available_materials.contains(material_name))
-    {
-        LogSystem::log(LogSeverity::LOG, "Material found in available materials list. Returning...");
-        return available_materials[material_name].get();
-    }
-
-    assert(false && "Material not found in available materials list!");
-}
-
-std::vector<Material*> AssetManager::fetchRequiredMaterials(const std::vector<std::string>& required_materials)
-{
-    std::vector<Material*> materials(required_materials.size());
-    for (size_t i = 0; i < required_materials.size(); ++i)
-    {
-        materials[i] = fetchMaterial(required_materials[i]);
-    }
-
-    return materials;
 }
 
 Texture* AssetManager::fetchTexture(const std::string& texture_name)

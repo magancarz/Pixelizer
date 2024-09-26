@@ -1,4 +1,4 @@
-#include "OBJLoader.h"
+#include "OBJLoaderTests.h"
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
@@ -28,7 +28,7 @@ namespace std
     };
 }
 
-MeshData OBJLoader::loadMeshFromFile(const std::string& mesh_name)
+MeshData OBJLoaderTests::loadMeshFromFile(const std::string& mesh_name)
 {
     const std::string filepath = PathBuilder().append(Assets::MODELS_DIRECTORY_PATH.string()).append(mesh_name).fileExtension(OBJ_FILE_EXTENSION).build();
     tinyobj::ObjReader obj_reader = parseFromFile(filepath);
@@ -41,7 +41,7 @@ MeshData OBJLoader::loadMeshFromFile(const std::string& mesh_name)
     return loadMeshData(obj_reader, mesh_name);
 }
 
-tinyobj::ObjReader OBJLoader::parseFromFile(const std::string& file_path)
+tinyobj::ObjReader OBJLoaderTests::parseFromFile(const std::string& file_path)
 {
     tinyobj::ObjReader obj_reader;
     tinyobj::ObjReaderConfig reader_config;
@@ -51,7 +51,7 @@ tinyobj::ObjReader OBJLoader::parseFromFile(const std::string& file_path)
     return obj_reader;
 }
 
-void OBJLoader::handleOBJParserErrorsAndWarnings(const tinyobj::ObjReader& reader)
+void OBJLoaderTests::handleOBJParserErrorsAndWarnings(const tinyobj::ObjReader& reader)
 {
     if (!reader.Valid())
     {
@@ -64,7 +64,7 @@ void OBJLoader::handleOBJParserErrorsAndWarnings(const tinyobj::ObjReader& reade
     }
 }
 
-MeshData OBJLoader::loadMeshData(const tinyobj::ObjReader& obj_reader, std::string_view mesh_name)
+MeshData OBJLoaderTests::loadMeshData(const tinyobj::ObjReader& obj_reader, std::string_view mesh_name)
 {
     MeshData mesh_data{};
     mesh_data.name = mesh_name;
@@ -74,7 +74,7 @@ MeshData OBJLoader::loadMeshData(const tinyobj::ObjReader& obj_reader, std::stri
     return mesh_data;
 }
 
-std::vector<MaterialData> OBJLoader::loadMaterials(const std::vector<tinyobj::material_t>& obj_materials)
+std::vector<MaterialData> OBJLoaderTests::loadMaterials(const std::vector<tinyobj::material_t>& obj_materials)
 {
     if (obj_materials.empty())
     {
@@ -94,7 +94,7 @@ std::vector<MaterialData> OBJLoader::loadMaterials(const std::vector<tinyobj::ma
     return materials_data;
 }
 
-std::string OBJLoader::getMaterialDiffuseTextureName(const tinyobj::material_t& obj_material)
+std::string OBJLoaderTests::getMaterialDiffuseTextureName(const tinyobj::material_t& obj_material)
 {
     if (obj_material.diffuse_texname.empty())
     {
@@ -104,7 +104,7 @@ std::string OBJLoader::getMaterialDiffuseTextureName(const tinyobj::material_t& 
     return obj_material.diffuse_texname;
 }
 
-std::string OBJLoader::getMaterialNormalMapName(const tinyobj::material_t& obj_material)
+std::string OBJLoaderTests::getMaterialNormalMapName(const tinyobj::material_t& obj_material)
 {
     if (obj_material.displacement_texname.empty())
     {
@@ -114,7 +114,7 @@ std::string OBJLoader::getMaterialNormalMapName(const tinyobj::material_t& obj_m
     return obj_material.displacement_texname;
 }
 
-std::vector<ModelData> OBJLoader::loadShapes(
+std::vector<ModelData> OBJLoaderTests::loadShapes(
         const tinyobj::ObjReader& reader,
         const std::vector<MaterialData>& materials_data)
 {
@@ -148,7 +148,7 @@ std::vector<ModelData> OBJLoader::loadShapes(
     return models_data;
 }
 
-std::string OBJLoader::getShapeRequiredMaterialName(const tinyobj::shape_t& shape, const std::vector<MaterialData>& materials_data)
+std::string OBJLoaderTests::getShapeRequiredMaterialName(const tinyobj::shape_t& shape, const std::vector<MaterialData>& materials_data)
 {
     if (int material_id = shape.mesh.material_ids[0]; material_id >= 0 && !materials_data.empty())
     {
@@ -158,7 +158,7 @@ std::string OBJLoader::getShapeRequiredMaterialName(const tinyobj::shape_t& shap
     return Assets::DEFAULT_MATERIAL_NAME;
 }
 
-Vertex OBJLoader::extractVertex(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
+Vertex OBJLoaderTests::extractVertex(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
 {
     Vertex vertex{};
     vertex.position = getVertexPosition(index, attrib);
@@ -168,7 +168,7 @@ Vertex OBJLoader::extractVertex(const tinyobj::index_t& index, const tinyobj::at
     return vertex;
 }
 
-glm::vec3 OBJLoader::getVertexPosition(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
+glm::vec3 OBJLoaderTests::getVertexPosition(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
 {
     glm::vec3 position{0, 0, 0};
 
@@ -185,7 +185,7 @@ glm::vec3 OBJLoader::getVertexPosition(const tinyobj::index_t& index, const tiny
     return position;
 }
 
-glm::vec3 OBJLoader::getVertexNormal(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
+glm::vec3 OBJLoaderTests::getVertexNormal(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
 {
     glm::vec3 normal{0, 0, 1};
     if (index.normal_index >= 0)
@@ -201,7 +201,7 @@ glm::vec3 OBJLoader::getVertexNormal(const tinyobj::index_t& index, const tinyob
     return normal;
 }
 
-glm::vec2 OBJLoader::getVertexTextureCoordinates(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
+glm::vec2 OBJLoaderTests::getVertexTextureCoordinates(const tinyobj::index_t& index, const tinyobj::attrib_t& attrib)
 {
     glm::vec2 uv{0, 0};
     if (index.texcoord_index >= 0)
@@ -216,7 +216,7 @@ glm::vec2 OBJLoader::getVertexTextureCoordinates(const tinyobj::index_t& index, 
     return uv;
 }
 
-void OBJLoader::addVertexToModelInfo(ModelData& model_data, std::unordered_map<Vertex, uint32_t>& unique_vertices, const Vertex& vertex)
+void OBJLoaderTests::addVertexToModelInfo(ModelData& model_data, std::unordered_map<Vertex, uint32_t>& unique_vertices, const Vertex& vertex)
 {
     if (!unique_vertices.contains(vertex))
     {

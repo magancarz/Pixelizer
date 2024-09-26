@@ -22,15 +22,9 @@ public:
     AssetManager operator=(const AssetManager&) = delete;
 
     virtual Mesh* fetchMesh(const std::string& mesh_name);
-
-    virtual Model* fetchModel(const std::string& model_name);
-
-    virtual Material* fetchMaterial(const std::string& material_name);
-    virtual std::vector<Material*> fetchRequiredMaterials(const std::vector<std::string>& required_materials);
-
     virtual Texture* fetchTexture(const std::string& texture_name);
 
-protected:
+private:
     VulkanSystem& vulkan_facade;
     VulkanMemoryAllocator& memory_allocator;
 

@@ -1,2 +1,8 @@
 target_sources(Pixelizer-Tests PRIVATE
-        UnitTests/DummyUnitTest.cpp)
+        main.cpp
+        Environment.cpp
+        TestLogger.cpp
+        TestUtils.cpp)
+
+add_subdirectory(Mocks)
+add_subdirectory(UnitTests)

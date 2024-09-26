@@ -7,7 +7,7 @@
 #include "Assets/Model/ModelData.h"
 #include "tiny_obj_loader.h"
 
-class OBJLoader
+class OBJLoaderTests
 {
 public:
     static MeshData loadMeshFromFile(const std::string& mesh_name);

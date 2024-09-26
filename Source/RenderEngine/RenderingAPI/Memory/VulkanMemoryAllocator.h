@@ -16,7 +16,7 @@ class DynamicBuffer;
 class VulkanMemoryAllocator
 {
 public:
-    explicit VulkanMemoryAllocator(Instance& vulkan_instance, PhysicalDevice& physical_device, Device& logical_device, const CommandPool& transfer_command_pool);
+    VulkanMemoryAllocator(Instance& vulkan_instance, PhysicalDevice& physical_device, Device& logical_device, const CommandPool& transfer_command_pool);
     ~VulkanMemoryAllocator();
 
     VulkanMemoryAllocator(const VulkanMemoryAllocator&) = delete;
