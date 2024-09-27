@@ -1,1 +1,1 @@
-# pixel-app
+# Pixelizer

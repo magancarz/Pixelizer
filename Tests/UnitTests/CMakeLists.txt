@@ -1,0 +1,5 @@
+add_subdirectory(Assets)
+add_subdirectory(Logs)
+add_subdirectory(Memory)
+add_subdirectory(Objects)
+add_subdirectory(RenderEngine)
