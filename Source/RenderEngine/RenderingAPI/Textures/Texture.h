@@ -10,11 +10,10 @@ class Texture
 {
 public:
     Texture(
-        PhysicalDevice& physical_device,
-        Device& logical_device,
-        const CommandPool& transfer_command_pool,
+        VulkanSystem& vulkan_system,
         VulkanMemoryAllocator& memory_allocator,
-        const TextureInfo& texture_info);
+        TextureInfo texture_info,
+        const VkImageCreateInfo& image_create_info);
     ~Texture();
 
     void writeTextureData(const std::vector<unsigned char>& data);
@@ -37,13 +36,19 @@ private:
     const CommandPool& transfer_command_pool;
     VulkanMemoryAllocator& memory_allocator;
     TextureInfo texture_info;
+    VkImageCreateInfo image_create_info;
     std::unique_ptr<Image> image{};
 
     void createImage();
     void createImageView();
     void createImageSampler();
 
-    void transitionImageLayout(VkImageLayout old_layout, VkImageLayout new_layout);
+    VkImageMemoryBarrier fillBasicImageMemoryBarrierInfo(VkImageLayout old_layout, VkImageLayout new_layout);
+    void transitionImageLayout(
+        const VkImageMemoryBarrier& image_memory_barrier,
+        VkPipelineStageFlags source_stage_mask,
+        VkPipelineStageFlags destination_stage_mask);
+    void copyDataToImage(const std::vector<unsigned char>& data);
     void generateMipmaps();
 
     VkImageView image_view{VK_NULL_HANDLE};

@@ -5,7 +5,6 @@
 #include "RenderEngine/RenderingAPI/Descriptors/DescriptorWriter.h"
 #include "RenderingAPI/Pipeline.h"
 #include "RenderingAPI/PipelineConfigInfo.h"
-#include "RenderingAPI/VulkanDefines.h"
 #include "RenderingAPI/VulkanUtils.h"
 #include "RenderingAPI/CommandBuffer/CommandBuffer.h"
 #include "RenderingAPI/Descriptors/DescriptorPoolBuilder.h"
@@ -16,21 +15,18 @@
 
 Renderer::Renderer(
         Window& window,
-        Instance& instance,
-        Surface& surface,
-        PhysicalDevice& physical_device,
-        Device& logical_device,
-        const CommandPool& graphics_command_pool,
+        VulkanSystem& vulkan_system,
         VulkanMemoryAllocator& memory_allocator,
         AssetManager& asset_manager)
-    : window{window}, instance{instance}, surface{surface}, physical_device{physical_device}, device{logical_device},
-    graphics_command_pool{graphics_command_pool}, memory_allocator{memory_allocator}, asset_manager{asset_manager},
-    swap_chain{recreateSwapChain()}
+    : window{window}, instance{vulkan_system.getInstance()}, surface{vulkan_system.getSurface()}, physical_device{vulkan_system.getPhysicalDevice()},
+    device{vulkan_system.getLogicalDevice()}, graphics_command_pool{vulkan_system.getGraphicsCommandPool()}, memory_allocator{memory_allocator},
+    asset_manager{asset_manager}, swap_chain{recreateSwapChain()}
 {
     createCommandBuffers();
     createCameraDescriptorSet();
     createRenderedToTextures();
     createSimplePipeline();
+    createPostProcessedImageDescriptorSetLayout();
     createPostProcessingPipeline();
 }
 
@@ -108,24 +104,43 @@ void Renderer::createCameraDescriptorSet()
 
 void Renderer::createRenderedToTextures()
 {
+    VkExtent2D window_extent = window.getExtent();
+
     TextureInfo rendered_to_texture_info{};
-    rendered_to_texture_info.width = window.getExtent().width;
-    rendered_to_texture_info.height = window.getExtent().height;
-    rendered_to_texture_info.format = VK_FORMAT_B8G8R8A8_SRGB;
-    rendered_to_texture_info.mip_levels = 1;
+    rendered_to_texture_info.width = window_extent.width;
+    rendered_to_texture_info.height = window_extent.height;
+
+    VkImageCreateInfo image_create_info{};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.extent.width = window_extent.width;
+    image_create_info.extent.height = window_extent.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = 1;
+    image_create_info.arrayLayers = 1;
+    image_create_info.format = VK_FORMAT_B8G8R8A8_SRGB;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
 
     for (std::size_t i = 0; i < SwapChain::MAX_FRAMES_IN_FLIGHT; ++i)
     {
-        rendered_to_textures.emplace_back(std::make_unique<Texture>(physical_device, device, graphics_command_pool, memory_allocator, rendered_to_texture_info));
+        rendered_to_textures.emplace_back(std::make_unique<Texture>(VulkanSystem::get(), memory_allocator, rendered_to_texture_info, image_create_info));
     }
 }
 
 void Renderer::createSimplePipeline()
 {
+    PipelineConfigInfo config_info = Pipeline::defaultPipelineConfigInfo();
+
     VkPushConstantRange push_constant_range{};
     push_constant_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(PushConstantData);
+
+    config_info.push_constant_ranges = std::vector<VkPushConstantRange>{push_constant_range};
 
     std::vector<VkDescriptorSetLayout> descriptor_set_layouts
     {
@@ -133,20 +148,7 @@ void Renderer::createSimplePipeline()
         Material::getMaterialDescriptorSetLayout().getDescriptorSetLayout()
     };
 
-    VkPipelineLayoutCreateInfo pipeline_layout_info{};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
-    pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
-
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-
-    if (vkCreatePipelineLayout(device.handle(), &pipeline_layout_info, VulkanDefines::NO_CALLBACK, &simple_pipeline_layout) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create pipeline layout!");
-    }
-
-    assert(simple_pipeline_layout != nullptr && "Cannot create pipeline before pipeline layout");
+    config_info.descriptor_set_layouts = descriptor_set_layouts;
 
     VkFormat swap_chain_image_format = swap_chain->getSwapChainImageFormat();
 
@@ -156,22 +158,14 @@ void Renderer::createSimplePipeline()
     pipeline_rendering_create_info.pColorAttachmentFormats = &swap_chain_image_format;
     pipeline_rendering_create_info.depthAttachmentFormat = swap_chain->getSwapChainDepthImageFormat();
 
-    PipelineConfigInfo config_info{};
-    Pipeline::defaultPipelineConfigInfo(config_info);
-    config_info.pipeline_layout = simple_pipeline_layout;
     config_info.rendering_create_info = pipeline_rendering_create_info;
 
-    simple_pipeline = std::make_unique<Pipeline>
-    (
-        device,
-        simple_pipeline_layout,
-        "Shaders/SimpleShader.vert.spv",
-        "Shaders/SimpleShader.frag.spv",
-        config_info
-    );
+    constexpr const char* vertex_shader_source{"Shaders/SimpleShader.vert.spv"};
+    constexpr const char* fragment_shader_source{"Shaders/SimpleShader.frag.spv"};
+    simple_pipeline = std::make_unique<Pipeline>(device, vertex_shader_source, fragment_shader_source, config_info);
 }
 
-void Renderer::createPostProcessingPipeline()
+void Renderer::createPostProcessedImageDescriptorSetLayout()
 {
     post_processed_image_descriptor_set_layout = DescriptorSetLayoutBuilder(device)
         .addBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -185,28 +179,20 @@ void Renderer::createPostProcessingPipeline()
             .writeImage(0, &descriptor_image_info)
             .build(post_processed_image_descriptor_set_handles[i]);
     }
+}
+
+void Renderer::createPostProcessingPipeline()
+{
+    PipelineConfigInfo config_info = Pipeline::defaultPipelineConfigInfo();
 
     VkPushConstantRange push_constant_range{};
     push_constant_range.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     push_constant_range.offset = 0;
     push_constant_range.size = sizeof(PostProcessingPushConstantData);
+    config_info.push_constant_ranges = std::vector<VkPushConstantRange>{push_constant_range};
 
     std::vector<VkDescriptorSetLayout> descriptor_set_layouts{ post_processed_image_descriptor_set_layout->getDescriptorSetLayout() };
-
-    VkPipelineLayoutCreateInfo pipeline_layout_info{};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(descriptor_set_layouts.size());
-    pipeline_layout_info.pSetLayouts = descriptor_set_layouts.data();
-
-    pipeline_layout_info.pushConstantRangeCount = 1;
-    pipeline_layout_info.pPushConstantRanges = &push_constant_range;
-
-    if (vkCreatePipelineLayout(device.handle(), &pipeline_layout_info, VulkanDefines::NO_CALLBACK, &post_processing_pipeline_layout) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create pipeline layout!");
-    }
-
-    assert(post_processing_pipeline_layout != nullptr && "Cannot create pipeline before pipeline layout");
+    config_info.descriptor_set_layouts = descriptor_set_layouts;
 
     VkFormat swap_chain_image_format = swap_chain->getSwapChainImageFormat();
 
@@ -215,21 +201,13 @@ void Renderer::createPostProcessingPipeline()
     pipeline_rendering_create_info.colorAttachmentCount = 1;
     pipeline_rendering_create_info.pColorAttachmentFormats = &swap_chain_image_format;
 
-    PipelineConfigInfo config_info{};
-    Pipeline::defaultPipelineConfigInfo(config_info);
-    config_info.pipeline_layout = post_processing_pipeline_layout;
     config_info.rendering_create_info = pipeline_rendering_create_info;
     config_info.binding_descriptions.clear();
     config_info.attribute_descriptions.clear();
 
-    post_processing_pipeline = std::make_unique<Pipeline>
-    (
-        device,
-        post_processing_pipeline_layout,
-        "Shaders/PixelizeProcessor.vert.spv",
-        "Shaders/PixelizeProcessor.frag.spv",
-        config_info
-    );
+    constexpr const char* vertex_shader_source{"Shaders/PixelizeProcessor.vert.spv"};
+    constexpr const char* fragment_shader_source{"Shaders/PixelizeProcessor.frag.spv"};
+    post_processing_pipeline = std::make_unique<Pipeline>(device, vertex_shader_source, fragment_shader_source, config_info);
 }
 
 void Renderer::render(FrameInfo& frame_info)
@@ -269,7 +247,7 @@ void Renderer::renderModel(FrameInfo& frame_info)
     Model* rendered_model = frame_info.rendered_model->models.front();
     rendered_model->bind(frame_info.command_buffer);
 
-    Material* rendered_material = frame_info.rendered_model->materials.front();
+    const Material* rendered_material = frame_info.rendered_model->materials.front();
     simple_pipeline->bindDescriptorSets(frame_info.command_buffer, &rendered_material->getMaterialDescriptorSet(), 1, 1);
 
     rendered_model->draw(frame_info.command_buffer);

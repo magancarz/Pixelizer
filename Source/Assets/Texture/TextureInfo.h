@@ -8,6 +8,4 @@ struct TextureInfo
     uint32_t width{0};
     uint32_t height{0};
     uint32_t number_of_channels{4};
-    VkFormat format;
-    uint32_t mip_levels{0};
 };

@@ -5,11 +5,11 @@
 struct PipelineConfigInfo
 {
     PipelineConfigInfo() = default;
-    PipelineConfigInfo(const PipelineConfigInfo&) = delete;
-    PipelineConfigInfo& operator=(const PipelineConfigInfo&) = delete;
 
-    std::vector<VkVertexInputBindingDescription> binding_descriptions{};
-    std::vector<VkVertexInputAttributeDescription> attribute_descriptions{};
+    std::vector<VkVertexInputBindingDescription> binding_descriptions;
+    std::vector<VkVertexInputAttributeDescription> attribute_descriptions;
+    std::vector<VkPushConstantRange> push_constant_ranges;
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
     VkPipelineViewportStateCreateInfo viewport_info{};
     VkPipelineInputAssemblyStateCreateInfo input_assembly_info{};
     VkPipelineRasterizationStateCreateInfo rasterization_info{};
@@ -20,5 +20,4 @@ struct PipelineConfigInfo
     std::vector<VkDynamicState> dynamic_state_enables;
     VkPipelineDynamicStateCreateInfo dynamic_state_info{};
     VkPipelineRenderingCreateInfoKHR rendering_create_info{};
-    VkPipelineLayout pipeline_layout{nullptr};
 };

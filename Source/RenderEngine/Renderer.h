@@ -15,11 +15,7 @@ class Renderer
 public:
     Renderer(
         Window& window,
-        Instance& instance,
-        Surface& surface,
-        PhysicalDevice& physical_device,
-        Device& logical_device,
-        const CommandPool& graphics_command_pool,
+        VulkanSystem& vulkan_system,
         VulkanMemoryAllocator& memory_allocator,
         AssetManager& asset_manager);
     ~Renderer();
@@ -78,6 +74,7 @@ private:
     VkPipelineLayout simple_pipeline_layout{VK_NULL_HANDLE};
     std::unique_ptr<Pipeline> simple_pipeline;
 
+    void createPostProcessedImageDescriptorSetLayout();
     void createPostProcessingPipeline();
 
     std::unique_ptr<DescriptorSetLayout> post_processed_image_descriptor_set_layout;

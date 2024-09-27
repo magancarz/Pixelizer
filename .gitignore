@@ -11,3 +11,5 @@ Logs/*.txt
 Testing/
 Results/
 Saved/
+
+coverage.*

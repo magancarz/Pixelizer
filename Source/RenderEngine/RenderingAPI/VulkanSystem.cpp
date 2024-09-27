@@ -4,9 +4,9 @@ VulkanSystem& VulkanSystem::initialize()
 {
     vulkan_system = std::unique_ptr<VulkanSystem>(new VulkanSystem());
 
-    pvkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>(
+    pvkCmdBeginRenderingKHR = std::bit_cast<PFN_vkCmdBeginRenderingKHR>(
         vkGetDeviceProcAddr(vulkan_system->getLogicalDevice().handle(), "vkCmdBeginRenderingKHR"));
-    pvkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>(
+    pvkCmdEndRenderingKHR = std::bit_cast<PFN_vkCmdEndRenderingKHR>(
         vkGetDeviceProcAddr(vulkan_system->getLogicalDevice().handle(), "vkCmdEndRenderingKHR"));
 
     return *vulkan_system;

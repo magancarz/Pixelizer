@@ -16,13 +16,19 @@ public:
     [[nodiscard]] const Queue& getPresentQueue() const { return present_queue; }
     [[nodiscard]] const Queue& getTransferQueue() const { return transfer_queue; }
 
-    std::mutex& fetchQueueMutex(uint32_t queue_family_index, uint32_t queue_index);
+    std::mutex& fetchQueueMutex(uint32_t queue_family_index);
 
 private:
     QueueFamilyIndices queue_family_indices;
     std::vector<std::mutex> queue_mutexes;
+    float queue_priority{1.0f};
 
     VkDevice createLogicalDevice(const Instance& instance, const PhysicalDevice& physical_device);
+    std::vector<VkDeviceQueueCreateInfo> fillQueueCreateInfos();
+    static VkPhysicalDeviceVulkan12Features fillVulkan12FeaturesInfo();
+    static VkPhysicalDeviceDynamicRenderingFeaturesKHR fillDynamicRenderingFeatureInfo();
+    static VkPhysicalDeviceFeatures fillPhysicalDeviceFeaturesInfo();
+    static void fillValidationLayersInfo(const Instance& instance, VkDeviceCreateInfo& device_create_info, const std::vector<const char*>& validation_layers);
 
     VkDevice device;
 

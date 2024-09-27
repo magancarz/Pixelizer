@@ -11,28 +11,29 @@ public:
     Instance();
     ~Instance();
 
-    VkInstance getInstance() { return instance; }
-    [[nodiscard]] bool validationLayersEnabled() const { return enable_validation_layers; }
+    [[nodiscard]] VkInstance getInstance() const { return instance; }
+    [[nodiscard]] static constexpr bool validationLayersEnabled() { return enable_validation_layers; }
     [[nodiscard]] std::vector<const char*> getEnabledValidationLayers() const { return validation_layers; }
 
     static constexpr const char* VALIDATION_LAYERS_PREFIX{"Vulkan validation layers: "};
 
 private:
 #ifdef NDEBUG
-    const bool enable_validation_layers = false;
+    static constexpr bool enable_validation_layers{false};
 #else
-    const bool enable_validation_layers = true;
+    static constexpr bool enable_validation_layers{true};
 #endif
 
     void createInstance();
+    VkApplicationInfo fillApplicationInfo();
     std::vector<const char*> getRequiredExtensions();
     bool checkValidationLayerSupport();
-    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& create_info);
+    VkDebugUtilsMessengerCreateInfoEXT populateDebugMessengerCreateInfo();
     void checkIfInstanceHasGlfwRequiredInstanceExtensions();
     void setupDebugMessenger();
 
-    VkInstance instance;
-    VkDebugUtilsMessengerEXT debug_messenger;
+    VkInstance instance{VK_NULL_HANDLE};
+    VkDebugUtilsMessengerEXT debug_messenger{VK_NULL_HANDLE};
 
     const std::vector<const char*> validation_layers = {"VK_LAYER_KHRONOS_validation"};
 };

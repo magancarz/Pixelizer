@@ -4,7 +4,7 @@
 
 Queue::Queue(Device& device, uint32_t queue_family_index)
     : device{device}, queue_family_index{queue_family_index},
-    queue{createQueue(queue_family_index)}, queue_mutex{device.fetchQueueMutex(queue_family_index, 0)} {}
+    queue{createQueue(queue_family_index)}, queue_mutex{device.fetchQueueMutex(queue_family_index)} {}
 
 VkQueue Queue::createQueue(uint32_t queue_family_index)
 {

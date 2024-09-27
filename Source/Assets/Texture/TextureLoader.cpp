@@ -41,6 +41,7 @@ TextureData TextureLoader::loadFromAssetFile(const std::string& texture_name)
         .height = static_cast<uint32_t>(height),
         .number_of_channels = static_cast<uint32_t>(EXPECTED_NUMBER_OF_CHANNELS),
         .data = std::move(copied_data),
+        .format = VK_FORMAT_R8G8B8A8_SRGB,
         .mip_levels = 1
     };
 }

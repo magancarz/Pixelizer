@@ -84,22 +84,7 @@ if (BUILD_TESTING)
 	target_link_libraries(Pixelizer-Tests PRIVATE GTest::gtest_main)
 	target_link_libraries(Pixelizer-Tests PRIVATE GTest::gmock)
 	target_include_directories(Pixelizer-Tests PRIVATE ${CMAKE_SOURCE_DIR}/Tests)
-	gtest_discover_tests(Pixelizer-Tests)
-endif ()
-
-option(coverage "Build for coverage report." OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-if (CMAKE_COMPILER_IS_GNUCXX AND COVERAGE)
-	message("Coverage report ENABLED")
-
-	include(${CMAKE_SOURCE_DIR}/CMake/CodeCoverage.cmake)
-	append_coverage_compiler_flags()
-	setup_target_for_coverage_gcovr_html(NAME Pixelizer-Tests-Coverage
-			EXECUTABLE ctest --verbose -C Debug
-			EXCLUDE ${CMAKE_SOURCE_DIR}/Tests/ ${CMAKE_SOURCE_DIR}/ThirdParty/)
-else ()
-	message("Coverage report disabled")
+	add_test(NAME Pixelizer-Tests COMMAND Pixelizer-Tests WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 endif ()
 
 add_subdirectory(Tests)

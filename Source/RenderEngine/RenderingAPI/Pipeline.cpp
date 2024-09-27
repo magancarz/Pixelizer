@@ -1,6 +1,7 @@
 #include "Pipeline.h"
 
 #include <fstream>
+#include <iostream>
 
 #include "VulkanDefines.h"
 #include "Assets/Model/Vertex.h"
@@ -8,48 +9,30 @@
 
 Pipeline::Pipeline(
         const Device& device,
-        VkPipelineLayout pipeline_layout,
         const std::string& vertex_file_path,
         const std::string& fragment_file_path,
         const PipelineConfigInfo& config_info)
-    : device{device}, pipeline_layout{pipeline_layout}
+    : device{device}
 {
+    createPipelineLayout(config_info);
     createGraphicsPipeline(vertex_file_path, fragment_file_path, config_info);
 }
 
-Pipeline::~Pipeline()
+void Pipeline::createPipelineLayout(const PipelineConfigInfo& config_info)
 {
-    vkDestroyShaderModule(device.handle(), vertex_shader_module, VulkanDefines::NO_CALLBACK);
-    vkDestroyShaderModule(device.handle(), fragment_shader_module, VulkanDefines::NO_CALLBACK);
-    vkDestroyPipeline(device.handle(), graphics_pipeline, VulkanDefines::NO_CALLBACK);
-}
+    VkPipelineLayoutCreateInfo pipeline_layout_info{};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(config_info.descriptor_set_layouts.size());
+    pipeline_layout_info.pSetLayouts = config_info.descriptor_set_layouts.data();
 
-void Pipeline::bind(VkCommandBuffer command_buffer)
-{
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
-}
+    pipeline_layout_info.pushConstantRangeCount = static_cast<uint32_t>(config_info.push_constant_ranges.size());
+    pipeline_layout_info.pPushConstantRanges = config_info.push_constant_ranges.data();
 
-void Pipeline::bindDescriptorSets(
-        VkCommandBuffer command_buffer,
-        const VkDescriptorSet* descriptor_sets,
-        uint32_t first_set,
-        uint32_t descriptor_set_count)
-{
-    vkCmdBindDescriptorSets(
-        command_buffer,
-        VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipeline_layout,
-        first_set,
-        descriptor_set_count,
-        descriptor_sets,
-        0,
-        nullptr);
+    VK_CHECK(vkCreatePipelineLayout(device.handle(), &pipeline_layout_info, VulkanDefines::NO_CALLBACK, &pipeline_layout));
 }
 
 void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const std::string& fragment_file_path, const PipelineConfigInfo& config_info)
 {
-    assert(config_info.pipeline_layout != VK_NULL_HANDLE && "Cannot create graphics pipeline: no pipeline layout provided in config info!");
-
     auto vert_code = readFile(vertex_file_path);
     auto frag_code = readFile(fragment_file_path);
 
@@ -97,15 +80,12 @@ void Pipeline::createGraphicsPipeline(const std::string& vertex_file_path, const
     pipeline_create_info.pDynamicState = &config_info.dynamic_state_info;
     pipeline_create_info.pNext = &config_info.rendering_create_info;
 
-    pipeline_create_info.layout = config_info.pipeline_layout;
+    pipeline_create_info.layout = pipeline_layout;
 
     pipeline_create_info.basePipelineIndex = -1;
     pipeline_create_info.basePipelineHandle = VK_NULL_HANDLE;
 
-    if (vkCreateGraphicsPipelines(device.handle(), VK_NULL_HANDLE, 1, &pipeline_create_info, nullptr, &graphics_pipeline) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create graphics pipeline!");
-    }
+    VK_CHECK(vkCreateGraphicsPipelines(device.handle(), VK_NULL_HANDLE, 1, &pipeline_create_info, VulkanDefines::NO_CALLBACK, &graphics_pipeline));
 }
 
 std::vector<char> Pipeline::readFile(const std::string& file_path)
@@ -132,14 +112,42 @@ void Pipeline::createShaderModule(const std::vector<char>& code, VkShaderModule*
     create_info.codeSize = code.size();
     create_info.pCode = std::bit_cast<const uint32_t*>(code.data());
 
-    if (vkCreateShaderModule(device.handle(), &create_info, VulkanDefines::NO_CALLBACK, shader_module) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create shader module!");
-    }
+    VK_CHECK(vkCreateShaderModule(device.handle(), &create_info, VulkanDefines::NO_CALLBACK, shader_module));
 }
 
-void Pipeline::defaultPipelineConfigInfo(PipelineConfigInfo& config_info)
+Pipeline::~Pipeline()
 {
+    vkDestroyShaderModule(device.handle(), vertex_shader_module, VulkanDefines::NO_CALLBACK);
+    vkDestroyShaderModule(device.handle(), fragment_shader_module, VulkanDefines::NO_CALLBACK);
+    vkDestroyPipeline(device.handle(), graphics_pipeline, VulkanDefines::NO_CALLBACK);
+}
+
+void Pipeline::bind(VkCommandBuffer command_buffer)
+{
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+}
+
+void Pipeline::bindDescriptorSets(
+        VkCommandBuffer command_buffer,
+        const VkDescriptorSet* descriptor_sets,
+        uint32_t first_set,
+        uint32_t descriptor_set_count)
+{
+    vkCmdBindDescriptorSets(
+        command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        pipeline_layout,
+        first_set,
+        descriptor_set_count,
+        descriptor_sets,
+        0,
+        nullptr);
+}
+
+PipelineConfigInfo Pipeline::defaultPipelineConfigInfo()
+{
+    PipelineConfigInfo config_info{};
+
     config_info.input_assembly_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     config_info.input_assembly_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     config_info.input_assembly_info.primitiveRestartEnable = VK_FALSE;
@@ -209,4 +217,6 @@ void Pipeline::defaultPipelineConfigInfo(PipelineConfigInfo& config_info)
 
     config_info.binding_descriptions = VulkanUtils::getVertexBindingDescriptions();
     config_info.attribute_descriptions = VulkanUtils::getVertexAttributeDescriptions();
+
+    return config_info;
 }

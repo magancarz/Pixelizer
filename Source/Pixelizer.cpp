@@ -18,8 +18,7 @@ Pixelizer::Pixelizer()
     vulkan_system{VulkanSystem::initialize()},
     vulkan_memory_allocator{vulkan_system.getInstance(), vulkan_system.getPhysicalDevice(), vulkan_system.getLogicalDevice(), vulkan_system.getTransferCommandPool()},
     asset_manager{vulkan_system, vulkan_memory_allocator},
-    renderer{window, vulkan_system.getInstance(), vulkan_system.getSurface(), vulkan_system.getPhysicalDevice(),
-        vulkan_system.getLogicalDevice(), vulkan_system.getGraphicsCommandPool(), vulkan_memory_allocator, asset_manager}
+    renderer{window, vulkan_system, vulkan_memory_allocator, asset_manager}
 {
     prepareScene();
 }
@@ -43,7 +42,7 @@ void Pixelizer::prepareScene()
     rendered_object.addComponent(std::move(object_transform_component));
 
     auto mesh_component = std::make_unique<MeshComponent>(rendered_object);
-    mesh_component->setMesh(asset_manager.fetchMesh("Suzanne"));
+    mesh_component->setMesh(asset_manager.fetchMesh("suzanne"));
     rendered_object.addComponent(std::move(mesh_component));
 }
 

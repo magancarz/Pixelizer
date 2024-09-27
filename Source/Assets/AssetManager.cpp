@@ -103,17 +103,23 @@ Texture* AssetManager::storeTexture(const TextureData& texture_data)
     texture_info.name = texture_data.name;
     texture_info.width = texture_data.width;
     texture_info.height = texture_data.height;
-    texture_info.format = texture_data.format;
-    texture_info.mip_levels = texture_data.mip_levels;
 
-    auto texture = std::make_unique<Texture>
-    (
-        vulkan_facade.getPhysicalDevice(),
-        vulkan_facade.getLogicalDevice(),
-        vulkan_facade.getTransferCommandPool(),
-        memory_allocator,
-        texture_info
-    );
+    VkImageCreateInfo image_create_info{};
+    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+    image_create_info.extent.width = texture_data.width;
+    image_create_info.extent.height = texture_data.height;
+    image_create_info.extent.depth = 1;
+    image_create_info.mipLevels = texture_data.mip_levels;
+    image_create_info.arrayLayers = 1;
+    image_create_info.format = texture_data.format;
+    image_create_info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    auto texture = std::make_unique<Texture>(vulkan_facade, memory_allocator, texture_info, image_create_info);
     texture->writeTextureData(texture_data.data);
 
     available_textures.try_emplace(texture_data.name, std::move(texture));

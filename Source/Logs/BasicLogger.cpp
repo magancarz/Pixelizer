@@ -17,11 +17,13 @@ void BasicLogger::log(LogSeverity severity, const char* message)
     if (severity == LogSeverity::VERBOSE || severity == LogSeverity::LOG)
     {
         std::cout << message;
+        return;
     }
-    else if (severity == LogSeverity::WARNING)
+
+    if (severity == LogSeverity::WARNING)
     {
 #ifdef __linux__
-        std::cout << "\033[0;33m" << message << "\033[0m";
+        std::cout << "\o{33}[0;33m" << message << "\o{33}[0m";
 #elif _WIN64
         GetConsoleScreenBufferInfo(h_console, &console_info);
         saved_attributes = console_info.wAttributes;
@@ -31,9 +33,8 @@ void BasicLogger::log(LogSeverity severity, const char* message)
 
         SetConsoleTextAttribute(h_console, saved_attributes);
 #endif
+        return;
     }
-    else
-    {
-        std::cerr << message;
-    }
+
+    std::cerr << message;
 }

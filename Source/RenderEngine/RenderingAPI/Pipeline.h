@@ -11,7 +11,6 @@ class Pipeline
 public:
     Pipeline(
         const Device& device,
-        VkPipelineLayout pipeline_layout,
         const std::string& vertex_file_path,
         const std::string& fragment_file_path,
         const PipelineConfigInfo& config_info);
@@ -39,10 +38,11 @@ public:
             push_constant);
     }
 
-    static void defaultPipelineConfigInfo(PipelineConfigInfo& config_info);
+    static PipelineConfigInfo defaultPipelineConfigInfo();
 
 private:
     static std::vector<char> readFile(const std::string& file_path);
+    void createPipelineLayout(const PipelineConfigInfo& config_info);
     void createGraphicsPipeline(const std::string& vertex_file_path, const std::string& fragment_file_path, const PipelineConfigInfo& config_info);
     void createShaderModule(const std::vector<char>& code, VkShaderModule* shader_module);
 
